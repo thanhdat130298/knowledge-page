@@ -1,0 +1,21 @@
+---
+description: Knowledge FStack Next.js App Router conventions — Server Components, Tailwind, security
+alwaysApply: true
+---
+
+# Knowledge FStack conventions
+
+- Next.js App Router + TypeScript strict.
+- Server Components mặc định; Client Component chỉ khi cần interactivity.
+- Tailwind CSS only — không styled-components, không Firebase, không NestJS.
+- Không expose `SUPABASE_SERVICE_ROLE_KEY` ra client.
+- Validate input bằng Zod trên Server Actions / route handlers.
+- Admin: kiểm tra `ADMIN_EMAILS` phía server, không chỉ ẩn UI.
+- Không tin user id từ client; lấy từ session Supabase.
+- Tiptap: editor và renderer phải đồng bộ extensions/custom blocks.
+- Accessibility + responsive là bắt buộc cho mọi UI mới.
+- Windows: dùng `npm` scripts (`npm run lint|typecheck|test|build`).
+- Không mở rộng ngoài `knowledge_base.md` MVP scope.
+- Không duplicate utility/component nếu đã có trong `src/lib` hoặc `src/components`.
+- Sau thay đổi lớn: chạy lint, typecheck, test, build.
+- Trước khi đóng phase: follow `.cursor/skills/audit-phases/SKILL.md`.

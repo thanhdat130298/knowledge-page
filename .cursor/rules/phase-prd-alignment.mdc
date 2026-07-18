@@ -1,0 +1,21 @@
+---
+description: Trước khi đóng phase hoặc claim khớp PRD, chạy skill audit-phases đối chiếu knowledge_base và plan
+alwaysApply: true
+---
+
+# Phase ↔ PRD alignment
+
+## Nguồn sự thật (theo thứ tự ưu tiên)
+
+1. [`knowledge_base.md`](knowledge_base.md) — product requirements đầy đủ
+2. [`.cursor/plans/knowledge_fstack_phases_e0b638cd.plan.md`](.cursor/plans/knowledge_fstack_phases_e0b638cd.plan.md) — phạm vi P0–P8
+3. [`docs/PHASE_AUDIT.md`](docs/PHASE_AUDIT.md) — checklist mapping và template báo cáo
+4. Codebase hiện tại — evidence thực tế
+
+## Bắt buộc
+
+- Không claim “phase xong”, “khớp knowledge_base”, hoặc “MVP done” khi chưa audit.
+- Khi user hỏi check phase / khớp PRD / coverage / trước khi đóng phase / trước acceptance §34: đọc và follow [`.cursor/skills/audit-phases/SKILL.md`](.cursor/skills/audit-phases/SKILL.md).
+- Gap phải cite mục trong `knowledge_base.md` (ví dụ §11 Comment).
+- Không mở rộng ngoài MVP trừ khi user yêu cầu rõ.
+- Sau mỗi phase: chạy `audit-phases` cho phase đó trước khi sang phase tiếp theo.
