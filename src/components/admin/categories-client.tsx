@@ -31,6 +31,7 @@ export function AdminCategoriesClient({ initial }: { initial: Category[] }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<SaveCategoryInput | null>(null);
   const [saving, setSaving] = useState(false);
+  const [busyKey, setBusyKey] = useState<string | null>(null);
 
   function syncItems(next: Category[]) {
     setItems(next);
@@ -58,6 +59,7 @@ export function AdminCategoriesClient({ initial }: { initial: Category[] }) {
   async function handleCreate() {
     if (!createForm.name.trim()) return;
     setSaving(true);
+    setBusyKey("create");
     try {
       const slug = createForm.slug.trim() || generateSlug(createForm.name);
       const result = await saveCategory({ ...createForm, slug });
@@ -82,12 +84,14 @@ export function AdminCategoriesClient({ initial }: { initial: Category[] }) {
       ]);
     } finally {
       setSaving(false);
+      setBusyKey(null);
     }
   }
 
   async function handleUpdate() {
     if (!editForm?.id) return;
     setSaving(true);
+    setBusyKey("update");
     try {
       const result = await saveCategory(editForm);
       if (!result.ok) {
@@ -113,11 +117,13 @@ export function AdminCategoriesClient({ initial }: { initial: Category[] }) {
       cancelEdit();
     } finally {
       setSaving(false);
+      setBusyKey(null);
     }
   }
 
   async function handleToggle(category: Category) {
     setSaving(true);
+    setBusyKey(`toggle:${category.id}`);
     try {
       const result = await saveCategory({
         id: category.id,
@@ -143,6 +149,7 @@ export function AdminCategoriesClient({ initial }: { initial: Category[] }) {
       });
     } finally {
       setSaving(false);
+      setBusyKey(null);
     }
   }
 
@@ -155,6 +162,7 @@ export function AdminCategoriesClient({ initial }: { initial: Category[] }) {
       return;
     }
     setSaving(true);
+    setBusyKey(`delete:${category.id}`);
     try {
       const result = await deleteCategory(category.id);
       if (!result.ok) {
@@ -166,6 +174,7 @@ export function AdminCategoriesClient({ initial }: { initial: Category[] }) {
       if (editingId === category.id) cancelEdit();
     } finally {
       setSaving(false);
+      setBusyKey(null);
     }
   }
 
@@ -236,8 +245,13 @@ export function AdminCategoriesClient({ initial }: { initial: Category[] }) {
           />
           Hiển thị công khai (active)
         </label>
-        <Button className="mt-4" disabled={saving} onClick={handleCreate}>
-          {saving ? "Đang lưu..." : "Thêm danh mục"}
+        <Button
+          className="mt-4"
+          loading={busyKey === "create"}
+          disabled={saving}
+          onClick={handleCreate}
+        >
+          {busyKey === "create" ? "Đang lưu..." : "Thêm danh mục"}
         </Button>
       </section>
 
@@ -321,10 +335,18 @@ export function AdminCategoriesClient({ initial }: { initial: Category[] }) {
                     Active
                   </label>
                   <div className="flex flex-wrap gap-2">
-                    <Button disabled={saving} onClick={handleUpdate}>
-                      Lưu
+                    <Button
+                      loading={busyKey === "update"}
+                      disabled={saving}
+                      onClick={handleUpdate}
+                    >
+                      {busyKey === "update" ? "Đang lưu..." : "Lưu"}
                     </Button>
-                    <Button variant="secondary" onClick={cancelEdit}>
+                    <Button
+                      variant="secondary"
+                      disabled={saving}
+                      onClick={cancelEdit}
+                    >
                       Hủy
                     </Button>
                   </div>
@@ -364,17 +386,23 @@ export function AdminCategoriesClient({ initial }: { initial: Category[] }) {
                       </Button>
                       <Button
                         variant="secondary"
+                        loading={busyKey === `toggle:${c.id}`}
                         disabled={saving}
                         onClick={() => handleToggle(c)}
                       >
-                        {c.is_active ? "Tắt" : "Bật"}
+                        {busyKey === `toggle:${c.id}`
+                          ? "Đang cập nhật..."
+                          : c.is_active
+                            ? "Tắt"
+                            : "Bật"}
                       </Button>
                       <Button
                         variant="danger"
+                        loading={busyKey === `delete:${c.id}`}
                         disabled={saving}
                         onClick={() => handleDelete(c)}
                       >
-                        Xóa
+                        {busyKey === `delete:${c.id}` ? "Đang xóa..." : "Xóa"}
                       </Button>
                     </div>
                   </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { deleteArticle } from "@/lib/actions/articles";
+import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -24,13 +25,14 @@ export function DeleteArticleButton({ id }: { id: string }) {
   }
 
   return (
-    <button
+    <Button
       type="button"
-      className="text-danger disabled:opacity-50"
-      disabled={loading}
+      variant="danger"
+      size="sm"
+      loading={loading}
       onClick={onDelete}
     >
-      {loading ? "..." : "Xóa"}
-    </button>
+      {loading ? "Đang xóa..." : "Xóa"}
+    </Button>
   );
 }

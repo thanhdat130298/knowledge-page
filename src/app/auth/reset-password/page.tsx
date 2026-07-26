@@ -68,7 +68,7 @@ export default function ResetPasswordPage() {
         </div>
         {error ? <p className="text-sm text-danger">{error}</p> : null}
         {message ? <p className="text-sm text-success">{message}</p> : null}
-        <Button type="submit" disabled={loading} className="w-full">
+        <Button type="submit" loading={loading} className="w-full">
           {loading ? "Đang lưu..." : "Cập nhật mật khẩu"}
         </Button>
       </form>

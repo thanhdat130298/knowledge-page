@@ -20,6 +20,7 @@ export function AdminFeedbackClient({ initial }: { initial: Item[] }) {
   const [items, setItems] = useState(initial);
   const [status, setStatus] = useState("");
   const [q, setQ] = useState("");
+  const [busyKey, setBusyKey] = useState<string | null>(null);
 
   const filtered = items.filter((i) => {
     if (status && i.status !== status) return false;
@@ -30,6 +31,23 @@ export function AdminFeedbackClient({ initial }: { initial: Item[] }) {
       return false;
     return true;
   });
+
+  async function updateStatus(id: string, next: Item["status"]) {
+    if (busyKey) return;
+    setBusyKey(`${id}:${next}`);
+    try {
+      // TODO: Server Action persist feedback status
+      setItems((prev) =>
+        prev.map((x) => (x.id === id ? { ...x, status: next } : x)),
+      );
+      toast({
+        title: `UI → ${next} (cần Server Action để persist)`,
+        variant: "default",
+      });
+    } finally {
+      setBusyKey(null);
+    }
+  }
 
   return (
     <>
@@ -56,53 +74,49 @@ export function AdminFeedbackClient({ initial }: { initial: Item[] }) {
         {filtered.length === 0 ? (
           <li className="text-sm text-muted">Chưa có feedback.</li>
         ) : (
-          filtered.map((item) => (
-            <li
-              key={item.id}
-              className="rounded-xl border border-card-border bg-card p-4"
-            >
-              <div className="text-sm text-muted">
-                {item.article} · {item.user} · {item.type} · {item.status}
-              </div>
-              <p className="mt-2 text-sm">{item.content}</p>
-              <Textarea
-                className="mt-3"
-                value={item.notes}
-                onChange={(e) =>
-                  setItems((prev) =>
-                    prev.map((x) =>
-                      x.id === item.id ? { ...x, notes: e.target.value } : x,
-                    ),
-                  )
-                }
-                placeholder="Ghi chú nội bộ"
-              />
-              <div className="mt-3 flex flex-wrap gap-2">
-                {(
-                  ["pending", "reviewing", "resolved", "rejected"] as const
-                ).map((s) => (
-                  <Button
-                    key={s}
-                    size="sm"
-                    variant={item.status === s ? "primary" : "secondary"}
-                    onClick={() => {
-                      setItems((prev) =>
-                        prev.map((x) =>
-                          x.id === item.id ? { ...x, status: s } : x,
-                        ),
-                      );
-                      toast({
-                        title: `UI → ${s} (cần Server Action để persist)`,
-                        variant: "default",
-                      });
-                    }}
-                  >
-                    {s}
-                  </Button>
-                ))}
-              </div>
-            </li>
-          ))
+          filtered.map((item) => {
+            const rowBusy = busyKey?.startsWith(`${item.id}:`) ?? false;
+            return (
+              <li
+                key={item.id}
+                className="rounded-xl border border-card-border bg-card p-4"
+              >
+                <div className="text-sm text-muted">
+                  {item.article} · {item.user} · {item.type} · {item.status}
+                </div>
+                <p className="mt-2 text-sm">{item.content}</p>
+                <Textarea
+                  className="mt-3"
+                  value={item.notes}
+                  disabled={rowBusy}
+                  onChange={(e) =>
+                    setItems((prev) =>
+                      prev.map((x) =>
+                        x.id === item.id ? { ...x, notes: e.target.value } : x,
+                      ),
+                    )
+                  }
+                  placeholder="Ghi chú nội bộ"
+                />
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {(
+                    ["pending", "reviewing", "resolved", "rejected"] as const
+                  ).map((s) => (
+                    <Button
+                      key={s}
+                      size="sm"
+                      variant={item.status === s ? "primary" : "secondary"}
+                      loading={busyKey === `${item.id}:${s}`}
+                      disabled={rowBusy && busyKey !== `${item.id}:${s}`}
+                      onClick={() => updateStatus(item.id, s)}
+                    >
+                      {busyKey === `${item.id}:${s}` ? "Đang lưu..." : s}
+                    </Button>
+                  ))}
+                </div>
+              </li>
+            );
+          })
         )}
       </ul>
     </>

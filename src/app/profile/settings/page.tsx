@@ -11,13 +11,21 @@ export default function ProfileSettingsPage() {
   const [username, setUsername] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [bio, setBio] = useState("");
+  const [saving, setSaving] = useState(false);
 
-  function save(e: React.FormEvent) {
+  async function save(e: React.FormEvent) {
     e.preventDefault();
-    toast({
-      title: "Đã lưu hồ sơ",
-      variant: "success",
-    });
+    if (saving) return;
+    setSaving(true);
+    try {
+      // TODO: Server Action persist profile
+      toast({
+        title: "Đã lưu hồ sơ",
+        variant: "success",
+      });
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -34,6 +42,7 @@ export default function ProfileSettingsPage() {
             onChange={(e) => setUsername(e.target.value)}
             required
             minLength={3}
+            disabled={saving}
           />
         </div>
         <div>
@@ -44,6 +53,7 @@ export default function ProfileSettingsPage() {
             id="display"
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
+            disabled={saving}
           />
         </div>
         <div>
@@ -55,10 +65,13 @@ export default function ProfileSettingsPage() {
             value={bio}
             onChange={(e) => setBio(e.target.value)}
             maxLength={500}
+            disabled={saving}
           />
         </div>
         <p className="text-xs text-muted">Email không hiển thị công khai.</p>
-        <Button type="submit">Lưu thay đổi</Button>
+        <Button type="submit" loading={saving}>
+          {saving ? "Đang lưu..." : "Lưu thay đổi"}
+        </Button>
       </form>
     </div>
   );

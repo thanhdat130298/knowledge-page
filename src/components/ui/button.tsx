@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { Loader2 } from "lucide-react";
 import { ButtonHTMLAttributes, forwardRef } from "react";
 
 type Variant = "primary" | "secondary" | "ghost" | "danger";
@@ -24,15 +25,28 @@ export const Button = forwardRef<
   ButtonHTMLAttributes<HTMLButtonElement> & {
     variant?: Variant;
     size?: Size;
+    /** Disables the button and shows a spinner before children */
+    loading?: boolean;
   }
 >(function Button(
-  { className, variant = "primary", size = "md", type = "button", ...props },
+  {
+    className,
+    variant = "primary",
+    size = "md",
+    type = "button",
+    loading = false,
+    disabled,
+    children,
+    ...props
+  },
   ref,
 ) {
   return (
     <button
       ref={ref}
       type={type}
+      disabled={disabled || loading}
+      aria-busy={loading || undefined}
       className={cn(
         "inline-flex items-center justify-center gap-2 rounded-xl font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none",
         variants[variant],
@@ -40,6 +54,11 @@ export const Button = forwardRef<
         className,
       )}
       {...props}
-    />
+    >
+      {loading ? (
+        <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
+      ) : null}
+      {children}
+    </button>
   );
 });

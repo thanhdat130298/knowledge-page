@@ -31,6 +31,7 @@ export function CommentSection({
   const [content, setContent] = useState("");
   const [replyTo, setReplyTo] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [votingId, setVotingId] = useState<string | null>(null);
 
   const sorted = useMemo(() => {
     const copy = [...comments];
@@ -99,31 +100,38 @@ export function CommentSection({
     }
   }
 
-  function vote(id: string) {
+  async function vote(id: string) {
     if (!isLoggedIn) return requireAuth();
-    setComments((prev) =>
-      prev.map((c) => {
-        if (c.id === id) {
+    if (votingId) return;
+    setVotingId(id);
+    try {
+      // TODO: Server Action persist vote
+      setComments((prev) =>
+        prev.map((c) => {
+          if (c.id === id) {
+            return {
+              ...c,
+              vote_count: (c.vote_count || 0) + (c.user_voted ? -1 : 1),
+              user_voted: !c.user_voted,
+            };
+          }
           return {
             ...c,
-            vote_count: (c.vote_count || 0) + (c.user_voted ? -1 : 1),
-            user_voted: !c.user_voted,
+            replies: c.replies?.map((r) =>
+              r.id === id
+                ? {
+                    ...r,
+                    vote_count: (r.vote_count || 0) + (r.user_voted ? -1 : 1),
+                    user_voted: !r.user_voted,
+                  }
+                : r,
+            ),
           };
-        }
-        return {
-          ...c,
-          replies: c.replies?.map((r) =>
-            r.id === id
-              ? {
-                  ...r,
-                  vote_count: (r.vote_count || 0) + (r.user_voted ? -1 : 1),
-                  user_voted: !r.user_voted,
-                }
-              : r,
-          ),
-        };
-      }),
-    );
+        }),
+      );
+    } finally {
+      setVotingId(null);
+    }
   }
 
   return (
@@ -171,7 +179,12 @@ export function CommentSection({
           <span className="text-xs text-muted">
             {content.length}/{MAX}
           </span>
-          <Button size="sm" onClick={submit} disabled={loading || !content.trim()}>
+          <Button
+            size="sm"
+            onClick={submit}
+            loading={loading}
+            disabled={!content.trim()}
+          >
             {loading ? "Đang gửi..." : "Gửi"}
           </Button>
         </div>
@@ -185,6 +198,7 @@ export function CommentSection({
             <CommentItem
               key={c.id}
               comment={c}
+              votingId={votingId}
               onReply={() => {
                 if (!isLoggedIn) return requireAuth();
                 setReplyTo(c.id);
@@ -201,11 +215,13 @@ export function CommentSection({
 
 function CommentItem({
   comment,
+  votingId,
   onReply,
   onVote,
   onVoteReply,
 }: {
   comment: Comment;
+  votingId: string | null;
   onReply: () => void;
   onVote: () => void;
   onVoteReply: (id: string) => void;
@@ -213,6 +229,7 @@ function CommentItem({
   const body = comment.is_deleted
     ? "Bình luận này đã bị xóa."
     : comment.content;
+  const voting = votingId === comment.id;
 
   return (
     <div className="rounded-xl border border-card-border bg-card p-4">
@@ -232,15 +249,19 @@ function CommentItem({
         <div className="mt-3 flex gap-2">
           <button
             type="button"
-            className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs hover:bg-accent-soft"
+            className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs hover:bg-accent-soft disabled:opacity-50"
             onClick={onVote}
+            disabled={Boolean(votingId)}
+            aria-busy={voting || undefined}
           >
-            <ThumbsUp className="h-3.5 w-3.5" /> {comment.vote_count || 0}
+            <ThumbsUp className="h-3.5 w-3.5" />{" "}
+            {voting ? "..." : comment.vote_count || 0}
           </button>
           <button
             type="button"
-            className="rounded-lg px-2 py-1 text-xs hover:bg-accent-soft"
+            className="rounded-lg px-2 py-1 text-xs hover:bg-accent-soft disabled:opacity-50"
             onClick={onReply}
+            disabled={Boolean(votingId)}
           >
             Reply
           </button>
@@ -261,10 +282,13 @@ function CommentItem({
               </p>
               <button
                 type="button"
-                className="mt-1 inline-flex items-center gap-1 text-xs text-muted hover:text-foreground"
+                className="mt-1 inline-flex items-center gap-1 text-xs text-muted hover:text-foreground disabled:opacity-50"
                 onClick={() => onVoteReply(r.id)}
+                disabled={Boolean(votingId)}
+                aria-busy={votingId === r.id || undefined}
               >
-                <ThumbsUp className="h-3.5 w-3.5" /> {r.vote_count || 0}
+                <ThumbsUp className="h-3.5 w-3.5" />{" "}
+                {votingId === r.id ? "..." : r.vote_count || 0}
               </button>
             </div>
           ))}

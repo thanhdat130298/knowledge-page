@@ -26,6 +26,15 @@ type Props = {
   bookmarkCount?: number;
 };
 
+type Busy =
+  | "bookmark"
+  | "rating"
+  | "progress"
+  | "share"
+  | "copy"
+  | "feedback"
+  | null;
+
 export function ArticleActions({
   articleId,
   isLoggedIn,
@@ -45,7 +54,7 @@ export function ArticleActions({
   const [avg, setAvg] = useState(ratingAvg);
   const [count, setCount] = useState(ratingCount);
   const [progress, setProgress] = useState<LearningStatus>(initialProgress);
-  const [ratingLoading, setRatingLoading] = useState(false);
+  const [busy, setBusy] = useState<Busy>(null);
 
   function requireAuth() {
     openLogin(pathname);
@@ -53,18 +62,27 @@ export function ArticleActions({
 
   async function toggleBookmark() {
     if (!isLoggedIn) return requireAuth();
-    setBookmarked((v) => !v);
-    setBookmarks((n) => (bookmarked ? Math.max(0, n - 1) : n + 1));
-    toast({
-      title: bookmarked ? "Đã bỏ bookmark" : "Đã lưu bookmark",
-      variant: "success",
-    });
+    if (busy) return;
+    setBusy("bookmark");
+    try {
+      // TODO: Server Action persist bookmark
+      setBookmarked((v) => !v);
+      setBookmarks((n) => (bookmarked ? Math.max(0, n - 1) : n + 1));
+      toast({
+        title: bookmarked ? "Đã bỏ bookmark" : "Đã lưu bookmark",
+        variant: "success",
+      });
+    } finally {
+      setBusy(null);
+    }
   }
 
   async function setStars(value: number) {
     if (!isLoggedIn) return requireAuth();
-    setRatingLoading(true);
+    if (busy) return;
+    setBusy("rating");
     try {
+      // TODO: Server Action persist rating
       const prev = rating;
       setRating(value);
       if (prev === 0) {
@@ -76,29 +94,49 @@ export function ArticleActions({
       }
       toast({ title: "Đã cập nhật đánh giá", variant: "success" });
     } finally {
-      setRatingLoading(false);
+      setBusy(null);
     }
   }
 
   async function updateProgress(next: LearningStatus) {
     if (!isLoggedIn) return requireAuth();
-    setProgress(next);
-    toast({ title: "Đã cập nhật tiến độ học", variant: "success" });
+    if (busy) return;
+    setBusy("progress");
+    try {
+      // TODO: Server Action persist learning progress
+      setProgress(next);
+      toast({ title: "Đã cập nhật tiến độ học", variant: "success" });
+    } finally {
+      setBusy(null);
+    }
   }
 
   async function copyLink() {
-    await navigator.clipboard.writeText(window.location.href);
-    toast({ title: "Đã copy link bài viết", variant: "success" });
+    if (busy) return;
+    setBusy("copy");
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      toast({ title: "Đã copy link bài viết", variant: "success" });
+    } finally {
+      setBusy(null);
+    }
   }
 
   async function share() {
-    if (navigator.share) {
-      await navigator.share({
-        title: document.title,
-        url: window.location.href,
-      });
-    } else {
-      await copyLink();
+    if (busy) return;
+    setBusy("share");
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: document.title,
+          url: window.location.href,
+        });
+      } else {
+        await navigator.clipboard.writeText(window.location.href);
+        toast({ title: "Đã copy link bài viết", variant: "success" });
+      }
+    } finally {
+      setBusy(null);
     }
   }
 
@@ -115,6 +153,8 @@ export function ArticleActions({
           variant={bookmarked ? "primary" : "secondary"}
           size="sm"
           onClick={toggleBookmark}
+          loading={busy === "bookmark"}
+          disabled={Boolean(busy) && busy !== "bookmark"}
           aria-pressed={bookmarked}
         >
           {bookmarked ? (
@@ -122,17 +162,32 @@ export function ArticleActions({
           ) : (
             <Bookmark className="h-4 w-4" />
           )}
-          Bookmark ({bookmarks})
-        </Button>
-        <Button variant="secondary" size="sm" onClick={share}>
-          <Share2 className="h-4 w-4" /> Chia sẻ
-        </Button>
-        <Button variant="secondary" size="sm" onClick={copyLink}>
-          <Link2 className="h-4 w-4" /> Copy link
+          {busy === "bookmark" ? "Đang lưu..." : `Bookmark (${bookmarks})`}
         </Button>
         <Button
           variant="secondary"
           size="sm"
+          onClick={share}
+          loading={busy === "share"}
+          disabled={Boolean(busy) && busy !== "share"}
+        >
+          <Share2 className="h-4 w-4" />{" "}
+          {busy === "share" ? "Đang chia sẻ..." : "Chia sẻ"}
+        </Button>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={copyLink}
+          loading={busy === "copy"}
+          disabled={Boolean(busy) && busy !== "copy"}
+        >
+          <Link2 className="h-4 w-4" />{" "}
+          {busy === "copy" ? "Đang copy..." : "Copy link"}
+        </Button>
+        <Button
+          variant="secondary"
+          size="sm"
+          disabled={Boolean(busy)}
           onClick={() => {
             if (!isLoggedIn) return requireAuth();
             document
@@ -151,7 +206,8 @@ export function ArticleActions({
             <button
               key={n}
               type="button"
-              disabled={ratingLoading}
+              disabled={Boolean(busy)}
+              aria-busy={busy === "rating" || undefined}
               aria-label={`${n} sao`}
               className="rounded p-1 hover:bg-accent-soft disabled:opacity-50"
               onClick={() => setStars(n)}
@@ -162,7 +218,9 @@ export function ArticleActions({
             </button>
           ))}
           <span className="ml-2 text-sm text-muted">
-            {avg.toFixed(1)} · {count} lượt
+            {busy === "rating"
+              ? "Đang lưu..."
+              : `${avg.toFixed(1)} · ${count} lượt`}
           </span>
         </div>
         <div className="mt-2 flex flex-wrap gap-2">
@@ -174,7 +232,8 @@ export function ArticleActions({
             <button
               key={label}
               type="button"
-              className="rounded-lg border border-card-border px-2.5 py-1 text-xs hover:bg-accent-soft"
+              disabled={Boolean(busy)}
+              className="rounded-lg border border-card-border px-2.5 py-1 text-xs hover:bg-accent-soft disabled:opacity-50"
               onClick={() => quickFeedback(label)}
             >
               {label}
@@ -197,14 +256,18 @@ export function ArticleActions({
             <button
               key={value}
               type="button"
-              className={`rounded-lg border px-2.5 py-1 text-xs ${
+              disabled={Boolean(busy)}
+              aria-busy={busy === "progress" || undefined}
+              className={`rounded-lg border px-2.5 py-1 text-xs disabled:opacity-50 ${
                 progress === value
                   ? "border-accent bg-accent-soft text-accent"
                   : "border-card-border hover:bg-accent-soft"
               }`}
               onClick={() => updateProgress(value)}
             >
-              {label}
+              {busy === "progress" && progress === value
+                ? "Đang lưu..."
+                : label}
             </button>
           ))}
         </div>

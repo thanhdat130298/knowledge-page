@@ -43,6 +43,7 @@ export function SiteHeader({
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userMenu, setUserMenu] = useState(false);
   const [q, setQ] = useState("");
+  const [loggingOut, setLoggingOut] = useState(false);
 
   const greetName = displayName || username || "bạn";
 
@@ -54,11 +55,19 @@ export function SiteHeader({
   }, [pathname]);
 
   async function logout() {
-    if (hasSupabasePublicConfig()) {
-      const supabase = createClient();
-      await supabase.auth.signOut();
+    if (loggingOut) return;
+    setLoggingOut(true);
+    try {
+      if (hasSupabasePublicConfig()) {
+        const supabase = createClient();
+        await supabase.auth.signOut();
+      }
+      router.refresh();
+    } finally {
+      setLoggingOut(false);
+      setUserMenu(false);
+      setMobileOpen(false);
     }
-    router.refresh();
   }
 
   function onSearch(e: React.FormEvent) {
@@ -82,6 +91,7 @@ export function SiteHeader({
           aria-label="Chính"
         >
           <NavLink href="/articles">Bài viết</NavLink>
+          <NavLink href="/series">Series</NavLink>
           <NavLink href="/search">Tìm kiếm</NavLink>
           {isLoggedIn ? (
             <>
@@ -183,10 +193,13 @@ export function SiteHeader({
                   ) : null}
                   <button
                     type="button"
-                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm hover:bg-accent-soft"
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm hover:bg-accent-soft disabled:opacity-50"
                     onClick={logout}
+                    disabled={loggingOut}
+                    aria-busy={loggingOut}
                   >
-                    <LogOut className="h-4 w-4" /> Đăng xuất
+                    <LogOut className="h-4 w-4" />{" "}
+                    {loggingOut ? "Đang đăng xuất..." : "Đăng xuất"}
                   </button>
                 </div>
               ) : null}
@@ -226,6 +239,7 @@ export function SiteHeader({
           ) : null}
           <nav className="flex flex-col gap-1" aria-label="Mobile">
             <NavLink href="/articles">Bài viết</NavLink>
+            <NavLink href="/series">Series</NavLink>
             <NavLink href="/search">Tìm kiếm</NavLink>
             {isLoggedIn ? (
               <>
@@ -235,10 +249,12 @@ export function SiteHeader({
                 {isAdmin ? <NavLink href="/admin">Admin</NavLink> : null}
                 <button
                   type="button"
-                  className="mt-1 rounded-lg px-2.5 py-1.5 text-left text-sm text-muted hover:bg-accent-soft hover:text-foreground"
+                  className="mt-1 rounded-lg px-2.5 py-1.5 text-left text-sm text-muted hover:bg-accent-soft hover:text-foreground disabled:opacity-50"
                   onClick={logout}
+                  disabled={loggingOut}
+                  aria-busy={loggingOut}
                 >
-                  Đăng xuất
+                  {loggingOut ? "Đang đăng xuất..." : "Đăng xuất"}
                 </button>
               </>
             ) : (

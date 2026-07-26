@@ -116,7 +116,7 @@ export function FeedbackForm({
             minLength={5}
           />
         </div>
-        <Button type="submit" disabled={loading}>
+        <Button type="submit" loading={loading}>
           {loading ? "Đang gửi..." : "Gửi góp ý"}
         </Button>
       </form>

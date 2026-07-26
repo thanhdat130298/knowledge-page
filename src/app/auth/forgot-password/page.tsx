@@ -50,7 +50,7 @@ export default function ForgotPasswordPage() {
         />
         {error ? <p className="text-sm text-danger">{error}</p> : null}
         {message ? <p className="text-sm text-success">{message}</p> : null}
-        <Button type="submit" disabled={loading} className="w-full">
+        <Button type="submit" loading={loading} className="w-full">
           {loading ? "Đang gửi..." : "Gửi link reset"}
         </Button>
       </form>

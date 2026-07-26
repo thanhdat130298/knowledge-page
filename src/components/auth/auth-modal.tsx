@@ -164,9 +164,9 @@ export function AuthModalProvider({ children }: { children: React.ReactNode }) {
                 className="w-full"
                 variant="secondary"
                 onClick={handleGoogle}
-                disabled={loading}
+                loading={loading}
               >
-                Tiếp tục với Google
+                {loading ? "Đang chuyển hướng..." : "Tiếp tục với Google"}
               </Button>
               <div className="relative text-center text-xs text-muted">
                 <span className="bg-card px-2">hoặc email</span>
@@ -242,7 +242,7 @@ export function AuthModalProvider({ children }: { children: React.ReactNode }) {
                     {success}
                   </p>
                 ) : null}
-                <Button className="w-full" type="submit" disabled={loading}>
+                <Button className="w-full" type="submit" loading={loading}>
                   {loading
                     ? "Đang xử lý..."
                     : mode === "login"
