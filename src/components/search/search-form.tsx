@@ -1,16 +1,22 @@
 "use client";
 
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { useRouter } from "next/navigation";
+import { Input } from "@/components/ui/input";
+import { usePendingNavigation } from "@/lib/hooks/use-pending-navigation";
 import { useEffect, useState } from "react";
 
 const HISTORY_KEY = "kf-search-history";
 
 export function SearchForm({ initialQuery }: { initialQuery: string }) {
-  const router = useRouter();
+  const { isPending, navigate } = usePendingNavigation();
   const [q, setQ] = useState(initialQuery);
   const [history, setHistory] = useState<string[]>([]);
+
+  useEffect(() => {
+    queueMicrotask(() => {
+      setQ(initialQuery);
+    });
+  }, [initialQuery]);
 
   useEffect(() => {
     queueMicrotask(() => {
@@ -23,15 +29,20 @@ export function SearchForm({ initialQuery }: { initialQuery: string }) {
     });
   }, []);
 
-  function submit(e: React.FormEvent) {
-    e.preventDefault();
-    const query = q.trim();
-    if (query) {
-      const next = [query, ...history.filter((h) => h !== query)].slice(0, 8);
+  function goSearch(query: string) {
+    const trimmed = query.trim();
+    if (trimmed) {
+      const next = [trimmed, ...history.filter((h) => h !== trimmed)].slice(0, 8);
       setHistory(next);
       localStorage.setItem(HISTORY_KEY, JSON.stringify(next));
     }
-    router.push(query ? `/search?q=${encodeURIComponent(query)}` : "/search");
+    navigate(trimmed ? `/search?q=${encodeURIComponent(trimmed)}` : "/search");
+  }
+
+  function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (isPending) return;
+    goSearch(q);
   }
 
   return (
@@ -42,9 +53,17 @@ export function SearchForm({ initialQuery }: { initialQuery: string }) {
           onChange={(e) => setQ(e.target.value)}
           placeholder="Nhập từ khóa..."
           aria-label="Từ khóa tìm kiếm"
+          disabled={isPending}
         />
-        <Button type="submit">Tìm</Button>
+        <Button type="submit" loading={isPending}>
+          {isPending ? "Đang tìm..." : "Tìm"}
+        </Button>
       </form>
+      {isPending ? (
+        <p className="mt-2 text-xs text-muted" role="status" aria-live="polite">
+          Đang tải kết quả tìm kiếm...
+        </p>
+      ) : null}
       {history.length ? (
         <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted">
           <span>Lịch sử:</span>
@@ -52,10 +71,11 @@ export function SearchForm({ initialQuery }: { initialQuery: string }) {
             <button
               key={h}
               type="button"
-              className="rounded-md border border-card-border px-2 py-1 hover:bg-accent-soft"
+              disabled={isPending}
+              className="rounded-md border border-card-border px-2 py-1 hover:bg-accent-soft disabled:opacity-50"
               onClick={() => {
                 setQ(h);
-                router.push(`/search?q=${encodeURIComponent(h)}`);
+                goSearch(h);
               }}
             >
               {h}

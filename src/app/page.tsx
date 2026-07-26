@@ -8,9 +8,8 @@ import {
   getTopRated,
   getArticlesByLevel,
 } from "@/lib/data/articles";
-import { Button } from "@/components/ui/button";
+import { HomeSearchForm } from "@/components/search/home-search-form";
 import Link from "next/link";
-import { Search } from "lucide-react";
 
 export default async function HomePage() {
   const [
@@ -48,27 +47,7 @@ export default async function HomePage() {
             Học và ôn kiến thức phỏng vấn Frontend theo từng level — từ JavaScript
             cốt lõi đến React, Vue, Next.js và kiến trúc thực tế.
           </p>
-          <form
-            action="/search"
-            className="animate-fade-up animate-delay-3 mt-8 flex max-w-xl gap-2"
-            role="search"
-          >
-            <label className="sr-only" htmlFor="home-search">
-              Tìm kiếm
-            </label>
-            <div className="relative flex-1">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
-              <input
-                id="home-search"
-                name="q"
-                placeholder="Event loop, closure, SSR..."
-                className="h-12 w-full rounded-xl border border-card-border bg-card pl-10 pr-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-              />
-            </div>
-            <Button type="submit" size="lg">
-              Tìm
-            </Button>
-          </form>
+          <HomeSearchForm />
           <div className="mt-5">
             <Link
               href="/articles"

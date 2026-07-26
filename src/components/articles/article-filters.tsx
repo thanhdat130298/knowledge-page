@@ -2,9 +2,10 @@
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { usePendingNavigation } from "@/lib/hooks/use-pending-navigation";
 import type { ArticleLevel, ArticleSort } from "@/types";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 
 type Props = {
   categories: { name: string; slug: string }[];
@@ -12,9 +13,9 @@ type Props = {
 };
 
 export function ArticleFilters({ categories, tags }: Props) {
-  const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
+  const { isPending, navigate } = usePendingNavigation();
   const [open, setOpen] = useState(false);
 
   const [q, setQ] = useState(params.get("q") || "");
@@ -23,7 +24,18 @@ export function ArticleFilters({ categories, tags }: Props) {
   const [level, setLevel] = useState(params.get("level") || "");
   const [sort, setSort] = useState(params.get("sort") || "updated");
 
+  useEffect(() => {
+    queueMicrotask(() => {
+      setQ(params.get("q") || "");
+      setCategory(params.get("category") || "");
+      setTag(params.get("tag") || "");
+      setLevel(params.get("level") || "");
+      setSort(params.get("sort") || "updated");
+    });
+  }, [params]);
+
   function apply(overrides?: Record<string, string>) {
+    if (isPending) return;
     const next = new URLSearchParams();
     const values = {
       q,
@@ -37,9 +49,13 @@ export function ArticleFilters({ categories, tags }: Props) {
       if (v) next.set(k, v);
     });
     next.delete("page");
-    router.push(`${pathname}?${next.toString()}`);
+    const qs = next.toString();
+    navigate(qs ? `${pathname}?${qs}` : pathname);
     setOpen(false);
   }
+
+  const selectClass =
+    "h-10 w-full rounded-xl border border-card-border bg-card px-3 text-sm disabled:opacity-50";
 
   const form = (
     <div className="space-y-3">
@@ -48,11 +64,23 @@ export function ArticleFilters({ categories, tags }: Props) {
         value={q}
         onChange={(e) => setQ(e.target.value)}
         aria-label="Search filter"
+        disabled={isPending}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            apply();
+          }
+        }}
       />
       <select
-        className="h-10 w-full rounded-xl border border-card-border bg-card px-3 text-sm"
+        className={selectClass}
         value={category}
-        onChange={(e) => setCategory(e.target.value)}
+        disabled={isPending}
+        onChange={(e) => {
+          const value = e.target.value;
+          setCategory(value);
+          apply({ category: value });
+        }}
         aria-label="Category"
       >
         <option value="">Tất cả danh mục</option>
@@ -63,9 +91,14 @@ export function ArticleFilters({ categories, tags }: Props) {
         ))}
       </select>
       <select
-        className="h-10 w-full rounded-xl border border-card-border bg-card px-3 text-sm"
+        className={selectClass}
         value={tag}
-        onChange={(e) => setTag(e.target.value)}
+        disabled={isPending}
+        onChange={(e) => {
+          const value = e.target.value;
+          setTag(value);
+          apply({ tag: value });
+        }}
         aria-label="Tag"
       >
         <option value="">Tất cả tag</option>
@@ -76,9 +109,14 @@ export function ArticleFilters({ categories, tags }: Props) {
         ))}
       </select>
       <select
-        className="h-10 w-full rounded-xl border border-card-border bg-card px-3 text-sm"
+        className={selectClass}
         value={level}
-        onChange={(e) => setLevel(e.target.value as ArticleLevel | "")}
+        disabled={isPending}
+        onChange={(e) => {
+          const value = e.target.value as ArticleLevel | "";
+          setLevel(value);
+          apply({ level: value });
+        }}
         aria-label="Level"
       >
         <option value="">All Levels</option>
@@ -87,9 +125,14 @@ export function ArticleFilters({ categories, tags }: Props) {
         <option value="senior">Senior</option>
       </select>
       <select
-        className="h-10 w-full rounded-xl border border-card-border bg-card px-3 text-sm"
+        className={selectClass}
         value={sort}
-        onChange={(e) => setSort(e.target.value as ArticleSort)}
+        disabled={isPending}
+        onChange={(e) => {
+          const value = e.target.value as ArticleSort;
+          setSort(value);
+          apply({ sort: value });
+        }}
         aria-label="Sort"
       >
         <option value="updated">Mới cập nhật</option>
@@ -98,19 +141,33 @@ export function ArticleFilters({ categories, tags }: Props) {
         <option value="comments">Nhiều comment</option>
         <option value="bookmarks">Nhiều bookmark</option>
       </select>
-      <Button className="w-full" onClick={() => apply()}>
-        Áp dụng
+      <Button className="w-full" loading={isPending} onClick={() => apply()}>
+        {isPending ? "Đang lọc..." : "Áp dụng"}
       </Button>
+      {isPending ? (
+        <p className="text-xs text-muted" role="status" aria-live="polite">
+          Đang tải danh sách bài viết...
+        </p>
+      ) : null}
     </div>
   );
 
   return (
     <>
       <div className="mb-4 lg:hidden">
-        <Button variant="secondary" className="w-full" onClick={() => setOpen((v) => !v)}>
+        <Button
+          variant="secondary"
+          className="w-full"
+          disabled={isPending}
+          onClick={() => setOpen((v) => !v)}
+        >
           Bộ lọc {open ? "▴" : "▾"}
         </Button>
-        {open ? <div className="mt-3 rounded-xl border border-card-border bg-card p-4">{form}</div> : null}
+        {open ? (
+          <div className="mt-3 rounded-xl border border-card-border bg-card p-4">
+            {form}
+          </div>
+        ) : null}
       </div>
       <aside className="hidden lg:block">
         <div className="sticky top-24 rounded-xl border border-card-border bg-card p-4">

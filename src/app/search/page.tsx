@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { SearchForm } from "@/components/search/search-form";
+import { PaginationNav } from "@/components/ui/pagination-nav";
 
 export const metadata: Metadata = {
   title: "Tìm kiếm",
@@ -24,7 +25,10 @@ export default async function SearchPage({
     ? await getArticles({ q, page, sort: "updated" })
     : { items: [], total: 0, page: 1, pageSize: 9 };
   const suggestions = q ? await searchSuggestions(q, 5) : [];
-  const totalPages = Math.max(1, Math.ceil(result.total / (result.pageSize || 9)));
+  const totalPages = Math.max(
+    1,
+    Math.ceil(result.total / (result.pageSize || 9)),
+  );
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 md:px-6">
@@ -68,23 +72,13 @@ export default async function SearchPage({
                 <ArticleCard key={a.id} article={a} />
               ))}
             </div>
-            {totalPages > 1 ? (
-              <div className="mt-8 flex justify-center gap-2">
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-                  <Link
-                    key={p}
-                    href={`/search?q=${encodeURIComponent(q)}&page=${p}`}
-                    className={`inline-flex h-9 min-w-9 items-center justify-center rounded-lg border px-2 text-sm ${
-                      p === page
-                        ? "border-accent bg-accent-soft"
-                        : "border-card-border"
-                    }`}
-                  >
-                    {p}
-                  </Link>
-                ))}
-              </div>
-            ) : null}
+            <PaginationNav
+              pages={totalPages}
+              current={page}
+              hrefForPage={(p) =>
+                `/search?q=${encodeURIComponent(q)}&page=${p}`
+              }
+            />
           </>
         )}
       </div>

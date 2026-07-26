@@ -5,9 +5,9 @@ import {
   getCategories,
   getTags,
 } from "@/lib/data/articles";
+import { PaginationNav } from "@/components/ui/pagination-nav";
 import type { ArticleLevel, ArticleSort } from "@/types";
 import type { Metadata } from "next";
-import Link from "next/link";
 import { Suspense } from "react";
 
 export const metadata: Metadata = {
@@ -40,6 +40,17 @@ export default async function ArticlesPage({
 
   const totalPages = Math.max(1, Math.ceil(result.total / result.pageSize));
 
+  function hrefForPage(p: number) {
+    const params = new URLSearchParams();
+    if (q) params.set("q", q);
+    if (category) params.set("category", category);
+    if (tag) params.set("tag", tag);
+    if (level) params.set("level", level);
+    if (sort) params.set("sort", sort);
+    params.set("page", String(p));
+    return `/articles?${params.toString()}`;
+  }
+
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 md:px-6">
       <h1 className="font-display text-3xl font-semibold">Bài viết</h1>
@@ -68,32 +79,11 @@ export default async function ArticlesPage({
             </div>
           )}
 
-          {totalPages > 1 ? (
-            <div className="mt-8 flex items-center justify-center gap-2">
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => {
-                const params = new URLSearchParams();
-                if (q) params.set("q", q);
-                if (category) params.set("category", category);
-                if (tag) params.set("tag", tag);
-                if (level) params.set("level", level);
-                if (sort) params.set("sort", sort);
-                params.set("page", String(p));
-                return (
-                  <Link
-                    key={p}
-                    href={`/articles?${params.toString()}`}
-                    className={`inline-flex h-9 min-w-9 items-center justify-center rounded-lg border px-2 text-sm ${
-                      p === page
-                        ? "border-accent bg-accent-soft text-accent"
-                        : "border-card-border hover:bg-accent-soft"
-                    }`}
-                  >
-                    {p}
-                  </Link>
-                );
-              })}
-            </div>
-          ) : null}
+          <PaginationNav
+            pages={totalPages}
+            current={page}
+            hrefForPage={hrefForPage}
+          />
         </div>
       </div>
     </div>

@@ -5,11 +5,13 @@ import { useAuthModal } from "@/components/auth/auth-modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { usePendingNavigation } from "@/lib/hooks/use-pending-navigation";
 import {
   Bookmark,
   GraduationCap,
   LayoutDashboard,
   LogOut,
+  Loader2,
   Menu,
   Moon,
   Search,
@@ -40,6 +42,7 @@ export function SiteHeader({
   const { openLogin } = useAuthModal();
   const pathname = usePathname();
   const router = useRouter();
+  const { isPending: searchPending, navigate } = usePendingNavigation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userMenu, setUserMenu] = useState(false);
   const [q, setQ] = useState("");
@@ -72,8 +75,9 @@ export function SiteHeader({
 
   function onSearch(e: React.FormEvent) {
     e.preventDefault();
+    if (searchPending) return;
     const query = q.trim();
-    router.push(query ? `/search?q=${encodeURIComponent(query)}` : "/search");
+    navigate(query ? `/search?q=${encodeURIComponent(query)}` : "/search");
   }
 
   return (
@@ -108,13 +112,19 @@ export function SiteHeader({
           role="search"
         >
           <div className="relative w-full">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+            {searchPending ? (
+              <Loader2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted" />
+            ) : (
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+            )}
             <Input
               aria-label="Tìm kiếm"
-              placeholder="Tìm bài phỏng vấn..."
+              placeholder={searchPending ? "Đang tìm..." : "Tìm bài phỏng vấn..."}
               className="pl-9"
               value={q}
               onChange={(e) => setQ(e.target.value)}
+              disabled={searchPending}
+              aria-busy={searchPending || undefined}
             />
           </div>
         </form>
@@ -122,11 +132,16 @@ export function SiteHeader({
         <div className="ml-auto flex items-center gap-1 lg:ml-0">
           <button
             type="button"
-            className="rounded-xl p-2 hover:bg-accent-soft xl:hidden"
+            className="rounded-xl p-2 hover:bg-accent-soft disabled:opacity-50 xl:hidden"
             aria-label="Mở tìm kiếm"
-            onClick={() => router.push("/search")}
+            disabled={searchPending}
+            onClick={() => navigate("/search")}
           >
-            <Search className="h-5 w-5" />
+            {searchPending ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : (
+              <Search className="h-5 w-5" />
+            )}
           </button>
 
           <button

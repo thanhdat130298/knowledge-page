@@ -4,6 +4,7 @@ import { formatDate } from "@/lib/utils";
 import type { Metadata } from "next";
 import { BackNav } from "@/components/ui/back-link";
 import { DeleteArticleButton } from "@/components/admin/delete-article-button";
+import { AdminArticlesFilter } from "@/components/admin/articles-filter";
 
 export const metadata: Metadata = {
   title: "Quản lý bài viết",
@@ -34,7 +35,9 @@ export default async function AdminArticlesPage({
       <BackNav href="/admin" label="Quay lại dashboard" />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="font-display text-3xl font-semibold">Quản lý bài viết</h1>
+          <h1 className="font-display text-3xl font-semibold">
+            Quản lý bài viết
+          </h1>
           <p className="text-sm text-muted">
             Dữ liệu từ bảng articles trên Supabase
           </p>
@@ -47,30 +50,7 @@ export default async function AdminArticlesPage({
         </Link>
       </div>
 
-      <form className="mt-6 flex flex-wrap gap-2">
-        <input
-          name="q"
-          defaultValue={q}
-          placeholder="Search title/slug"
-          className="h-10 rounded-xl border border-card-border bg-card px-3 text-sm"
-        />
-        <select
-          name="status"
-          defaultValue={status}
-          className="h-10 rounded-xl border border-card-border bg-card px-3 text-sm"
-        >
-          <option value="">All status</option>
-          <option value="draft">Draft</option>
-          <option value="published">Published</option>
-          <option value="archived">Archived</option>
-        </select>
-        <button
-          type="submit"
-          className="h-10 rounded-xl border border-card-border px-4 text-sm hover:bg-accent-soft"
-        >
-          Lọc
-        </button>
-      </form>
+      <AdminArticlesFilter initialQ={q} initialStatus={status} />
 
       <div className="mt-6 overflow-x-auto rounded-xl border border-card-border">
         <table className="min-w-full text-left text-sm">
