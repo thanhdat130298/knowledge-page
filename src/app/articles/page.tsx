@@ -1,5 +1,5 @@
 import { ArticleCard } from "@/components/articles/article-card";
-import { ArticleFilters } from "@/components/articles/article-filters";
+import { ArticlesBrowseShell } from "@/components/articles/articles-browse-shell";
 import {
   getArticles,
   getCategories,
@@ -58,15 +58,15 @@ export default async function ArticlesPage({
         {result.total} kết quả · trang {result.page}/{totalPages}
       </p>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[240px_1fr]">
-        <Suspense fallback={null}>
-          <ArticleFilters
-            categories={categories.map((c) => ({ name: c.name, slug: c.slug }))}
-            tags={tags.map((t) => ({ name: t.name, slug: t.slug }))}
-          />
-        </Suspense>
-
-        <div>
+      <Suspense
+        fallback={
+          <div className="mt-6 h-64 animate-pulse rounded-xl bg-card-border/40" />
+        }
+      >
+        <ArticlesBrowseShell
+          categories={categories.map((c) => ({ name: c.name, slug: c.slug }))}
+          tags={tags.map((t) => ({ name: t.name, slug: t.slug }))}
+        >
           {result.items.length === 0 ? (
             <div className="rounded-xl border border-dashed border-card-border p-10 text-center text-muted">
               Không tìm thấy bài viết phù hợp.
@@ -84,8 +84,8 @@ export default async function ArticlesPage({
             current={page}
             hrefForPage={hrefForPage}
           />
-        </div>
-      </div>
+        </ArticlesBrowseShell>
+      </Suspense>
     </div>
   );
 }

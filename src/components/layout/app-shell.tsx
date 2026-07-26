@@ -2,6 +2,7 @@ import { SiteHeader } from "@/components/layout/site-header";
 import { getCurrentProfile, getSessionUser } from "@/lib/auth/session";
 import { isAdminEmail } from "@/lib/utils";
 import Link from "next/link";
+import { Suspense } from "react";
 
 export async function AppShell({ children }: { children: React.ReactNode }) {
   const [user, profile] = await Promise.all([
@@ -12,14 +13,18 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      <SiteHeader
-        isLoggedIn={Boolean(user)}
-        isAdmin={isAdmin}
-        username={profile?.username}
-        displayName={
-          profile?.display_name || profile?.username || user?.email?.split("@")[0]
-        }
-      />
+      <Suspense fallback={<header className="h-14 border-b border-card-border md:h-16" />}>
+        <SiteHeader
+          isLoggedIn={Boolean(user)}
+          isAdmin={isAdmin}
+          username={profile?.username}
+          displayName={
+            profile?.display_name ||
+            profile?.username ||
+            user?.email?.split("@")[0]
+          }
+        />
+      </Suspense>
       <main className="flex-1">{children}</main>
       <footer className="mt-16 border-t border-card-border">
         <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-8 text-sm text-muted md:flex-row md:items-center md:justify-between md:px-6">

@@ -10,6 +10,7 @@ import {
 } from "@/lib/data/articles";
 import { HomeSearchForm } from "@/components/search/home-search-form";
 import Link from "next/link";
+import { Suspense } from "react";
 
 export default async function HomePage() {
   const [
@@ -47,7 +48,9 @@ export default async function HomePage() {
             Học và ôn kiến thức phỏng vấn Frontend theo từng level — từ JavaScript
             cốt lõi đến React, Vue, Next.js và kiến trúc thực tế.
           </p>
-          <HomeSearchForm />
+          <Suspense fallback={<div className="mt-8 h-12 max-w-xl animate-pulse rounded-xl bg-card-border/50" />}>
+            <HomeSearchForm />
+          </Suspense>
           <div className="mt-5">
             <Link
               href="/articles"

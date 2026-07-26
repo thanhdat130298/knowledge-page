@@ -4,7 +4,8 @@ import { formatDate } from "@/lib/utils";
 import type { Metadata } from "next";
 import { BackNav } from "@/components/ui/back-link";
 import { DeleteArticleButton } from "@/components/admin/delete-article-button";
-import { AdminArticlesFilter } from "@/components/admin/articles-filter";
+import { AdminArticlesShell } from "@/components/admin/admin-articles-shell";
+import { Suspense } from "react";
 
 export const metadata: Metadata = {
   title: "Quản lý bài viết",
@@ -50,62 +51,71 @@ export default async function AdminArticlesPage({
         </Link>
       </div>
 
-      <AdminArticlesFilter initialQ={q} initialStatus={status} />
-
-      <div className="mt-6 overflow-x-auto rounded-xl border border-card-border">
-        <table className="min-w-full text-left text-sm">
-          <thead className="bg-card">
-            <tr className="border-b border-card-border">
-              <th className="px-3 py-2">Title</th>
-              <th className="px-3 py-2">Status</th>
-              <th className="px-3 py-2">Level</th>
-              <th className="px-3 py-2">Updated</th>
-              <th className="px-3 py-2">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {articles.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="px-3 py-8 text-center text-muted">
-                  Chưa có bài trên Supabase.{" "}
-                  <Link
-                    href="/admin/articles/new"
-                    className="text-accent underline"
-                  >
-                    Tạo bài đầu tiên
-                  </Link>
-                </td>
-              </tr>
-            ) : (
-              articles.map((a) => (
-                <tr key={a.id} className="border-b border-card-border">
-                  <td className="px-3 py-2">
-                    <div className="font-medium">{a.title}</div>
-                    <div className="text-xs text-muted">{a.slug}</div>
-                  </td>
-                  <td className="px-3 py-2 capitalize">{a.status}</td>
-                  <td className="px-3 py-2 capitalize">{a.level}</td>
-                  <td className="px-3 py-2">{formatDate(a.updated_at)}</td>
-                  <td className="px-3 py-2">
-                    <div className="flex flex-wrap gap-2">
-                      <Link
-                        href={`/admin/articles/${a.id}`}
-                        className="text-accent"
-                      >
-                        Edit
-                      </Link>
-                      <Link href={`/articles/${a.slug}`} className="text-muted">
-                        Preview
-                      </Link>
-                      <DeleteArticleButton id={a.id} />
-                    </div>
-                  </td>
+      <Suspense
+        fallback={
+          <div className="mt-6 h-40 animate-pulse rounded-xl bg-card-border/40" />
+        }
+      >
+        <AdminArticlesShell initialQ={q} initialStatus={status}>
+          <div className="overflow-x-auto rounded-xl border border-card-border">
+            <table className="min-w-full text-left text-sm">
+              <thead className="bg-card">
+                <tr className="border-b border-card-border">
+                  <th className="px-3 py-2">Title</th>
+                  <th className="px-3 py-2">Status</th>
+                  <th className="px-3 py-2">Level</th>
+                  <th className="px-3 py-2">Updated</th>
+                  <th className="px-3 py-2">Actions</th>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+              </thead>
+              <tbody>
+                {articles.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-3 py-8 text-center text-muted">
+                      Chưa có bài trên Supabase.{" "}
+                      <Link
+                        href="/admin/articles/new"
+                        className="text-accent underline"
+                      >
+                        Tạo bài đầu tiên
+                      </Link>
+                    </td>
+                  </tr>
+                ) : (
+                  articles.map((a) => (
+                    <tr key={a.id} className="border-b border-card-border">
+                      <td className="px-3 py-2">
+                        <div className="font-medium">{a.title}</div>
+                        <div className="text-xs text-muted">{a.slug}</div>
+                      </td>
+                      <td className="px-3 py-2 capitalize">{a.status}</td>
+                      <td className="px-3 py-2 capitalize">{a.level}</td>
+                      <td className="px-3 py-2">{formatDate(a.updated_at)}</td>
+                      <td className="px-3 py-2">
+                        <div className="flex flex-wrap gap-2">
+                          <Link
+                            href={`/admin/articles/${a.id}`}
+                            className="text-accent"
+                          >
+                            Edit
+                          </Link>
+                          <Link
+                            href={`/articles/${a.slug}`}
+                            className="text-muted"
+                          >
+                            Preview
+                          </Link>
+                          <DeleteArticleButton id={a.id} />
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </AdminArticlesShell>
+      </Suspense>
     </div>
   );
 }

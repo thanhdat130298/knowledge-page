@@ -51,7 +51,7 @@ export function ArticleFilters({ categories, tags }: Props) {
     next.delete("page");
     const qs = next.toString();
     navigate(qs ? `${pathname}?${qs}` : pathname);
-    setOpen(false);
+    // Keep mobile filter open while pending so the busy state stays visible
   }
 
   const selectClass =
@@ -145,8 +145,8 @@ export function ArticleFilters({ categories, tags }: Props) {
         {isPending ? "Đang lọc..." : "Áp dụng"}
       </Button>
       {isPending ? (
-        <p className="text-xs text-muted" role="status" aria-live="polite">
-          Đang tải danh sách bài viết...
+        <p className="text-xs text-accent" role="status" aria-live="polite">
+          Đang áp dụng bộ lọc...
         </p>
       ) : null}
     </div>

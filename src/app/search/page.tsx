@@ -3,7 +3,7 @@ import { getArticles, searchSuggestions } from "@/lib/data/articles";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { SearchForm } from "@/components/search/search-form";
+import { SearchBrowseShell } from "@/components/search/search-browse-shell";
 import { PaginationNav } from "@/components/ui/pagination-nav";
 
 export const metadata: Metadata = {
@@ -36,52 +36,53 @@ export default async function SearchPage({
       <p className="mt-1 text-muted">
         Ưu tiên khớp tiêu đề · không phân biệt hoa thường · hỗ trợ tiếng Việt
       </p>
-      <div className="mt-6">
-        <Suspense fallback={null}>
-          <SearchForm initialQuery={q} />
-        </Suspense>
-      </div>
 
-      {q && suggestions.length ? (
-        <div className="mt-4 flex flex-wrap gap-2 text-sm">
-          <span className="text-muted">Gợi ý:</span>
-          {suggestions.map((s) => (
-            <Link
-              key={s.slug}
-              href={`/articles/${s.slug}`}
-              className="rounded-lg border border-card-border px-2 py-1 hover:bg-accent-soft"
-            >
-              {s.title}
-            </Link>
-          ))}
-        </div>
-      ) : null}
-
-      <div className="mt-8">
-        {!q ? (
-          <p className="text-muted">Nhập từ khóa để bắt đầu tìm kiếm.</p>
-        ) : result.items.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-card-border p-10 text-center text-muted">
-            Không có kết quả cho “{q}”.
-          </div>
-        ) : (
-          <>
-            <p className="mb-4 text-sm text-muted">{result.total} kết quả</p>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {result.items.map((a) => (
-                <ArticleCard key={a.id} article={a} />
+      <Suspense
+        fallback={
+          <div className="mt-6 h-40 animate-pulse rounded-xl bg-card-border/40" />
+        }
+      >
+        <SearchBrowseShell initialQuery={q}>
+          {q && suggestions.length ? (
+            <div className="mb-4 flex flex-wrap gap-2 text-sm">
+              <span className="text-muted">Gợi ý:</span>
+              {suggestions.map((s) => (
+                <Link
+                  key={s.slug}
+                  href={`/articles/${s.slug}`}
+                  className="rounded-lg border border-card-border px-2 py-1 hover:bg-accent-soft"
+                >
+                  {s.title}
+                </Link>
               ))}
             </div>
-            <PaginationNav
-              pages={totalPages}
-              current={page}
-              hrefForPage={(p) =>
-                `/search?q=${encodeURIComponent(q)}&page=${p}`
-              }
-            />
-          </>
-        )}
-      </div>
+          ) : null}
+
+          {!q ? (
+            <p className="text-muted">Nhập từ khóa để bắt đầu tìm kiếm.</p>
+          ) : result.items.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-card-border p-10 text-center text-muted">
+              Không có kết quả cho “{q}”.
+            </div>
+          ) : (
+            <>
+              <p className="mb-4 text-sm text-muted">{result.total} kết quả</p>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {result.items.map((a) => (
+                  <ArticleCard key={a.id} article={a} />
+                ))}
+              </div>
+              <PaginationNav
+                pages={totalPages}
+                current={page}
+                hrefForPage={(p) =>
+                  `/search?q=${encodeURIComponent(q)}&page=${p}`
+                }
+              />
+            </>
+          )}
+        </SearchBrowseShell>
+      </Suspense>
     </div>
   );
 }
