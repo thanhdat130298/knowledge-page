@@ -40,16 +40,11 @@ export default async function ArticlesPage({
 
   const totalPages = Math.max(1, Math.ceil(result.total / result.pageSize));
 
-  function hrefForPage(p: number) {
-    const params = new URLSearchParams();
-    if (q) params.set("q", q);
-    if (category) params.set("category", category);
-    if (tag) params.set("tag", tag);
-    if (level) params.set("level", level);
-    if (sort) params.set("sort", sort);
-    params.set("page", String(p));
-    return `/articles?${params.toString()}`;
-  }
+  const paginationQuery: Record<string, string> = { sort };
+  if (q) paginationQuery.q = q;
+  if (category) paginationQuery.category = category;
+  if (tag) paginationQuery.tag = tag;
+  if (level) paginationQuery.level = level;
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 md:px-6">
@@ -82,7 +77,8 @@ export default async function ArticlesPage({
           <PaginationNav
             pages={totalPages}
             current={page}
-            hrefForPage={hrefForPage}
+            pathname="/articles"
+            query={paginationQuery}
           />
         </ArticlesBrowseShell>
       </Suspense>

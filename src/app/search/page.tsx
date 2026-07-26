@@ -75,9 +75,8 @@ export default async function SearchPage({
               <PaginationNav
                 pages={totalPages}
                 current={page}
-                hrefForPage={(p) =>
-                  `/search?q=${encodeURIComponent(q)}&page=${p}`
-                }
+                pathname="/search"
+                query={q ? { q } : {}}
               />
             </>
           )}

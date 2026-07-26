@@ -6,13 +6,31 @@ import { cn } from "@/lib/utils";
 type Props = {
   pages: number;
   current: number;
-  hrefForPage: (page: number) => string;
+  /** Path without query, e.g. `/articles` or `/search` */
+  pathname: string;
+  /** Serializable query params (excluding `page`, which is set per button) */
+  query?: Record<string, string>;
 };
 
-export function PaginationNav({ pages, current, hrefForPage }: Props) {
+export function PaginationNav({
+  pages,
+  current,
+  pathname,
+  query = {},
+}: Props) {
   const { isPending, navigate } = usePendingNavigation();
 
   if (pages <= 1) return null;
+
+  function hrefForPage(page: number) {
+    const params = new URLSearchParams();
+    Object.entries(query).forEach(([key, value]) => {
+      if (value) params.set(key, value);
+    });
+    params.set("page", String(page));
+    const qs = params.toString();
+    return qs ? `${pathname}?${qs}` : pathname;
+  }
 
   return (
     <div className="mt-8 flex flex-col items-center gap-2">
