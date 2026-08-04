@@ -1,9 +1,10 @@
-import type { Article, Category, Profile, Tag } from "@/types";
+import type { Article, Category, Profile, Series, Tag } from "@/types";
 
 type TagJoin = { tag: Tag | null };
 type ArticleRow = Article & {
   category?: Category | null;
   author?: Profile | null;
+  series?: Series | null;
   article_tags?: TagJoin[] | null;
 };
 
@@ -27,6 +28,8 @@ export function mapArticleRow(row: ArticleRow): Article {
     cover_image_url: row.cover_image_url,
     cover_image_alt: row.cover_image_alt,
     category_id: row.category_id,
+    series_id: row.series_id ?? null,
+    series_order: row.series_order ?? 0,
     level: row.level,
     status: row.status,
     is_featured: row.is_featured,
@@ -40,6 +43,7 @@ export function mapArticleRow(row: ArticleRow): Article {
     created_at: row.created_at,
     updated_at: row.updated_at,
     category: row.category ?? null,
+    series: row.series ?? null,
     author: row.author ?? null,
     tags,
     rating_avg: row.rating_avg ?? 0,
@@ -52,6 +56,7 @@ export function mapArticleRow(row: ArticleRow): Article {
 export const articleSelect = `
   *,
   category:categories(*),
+  series:series(*),
   author:profiles(*),
   article_tags(tag:tags(*))
 `;

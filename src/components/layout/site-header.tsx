@@ -95,6 +95,7 @@ export function SiteHeader({
           aria-label="Chính"
         >
           <NavLink href="/articles">Bài viết</NavLink>
+          <NavLink href="/series">Series</NavLink>
           <NavLink href="/search">Tìm kiếm</NavLink>
           {isLoggedIn ? (
             <>
@@ -253,6 +254,7 @@ export function SiteHeader({
           ) : null}
           <nav className="flex flex-col gap-1" aria-label="Mobile">
             <NavLink href="/articles">Bài viết</NavLink>
+            <NavLink href="/series">Series</NavLink>
             <NavLink href="/search">Tìm kiếm</NavLink>
             {isLoggedIn ? (
               <>

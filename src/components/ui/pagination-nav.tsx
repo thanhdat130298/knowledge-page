@@ -33,8 +33,8 @@ export function PaginationNav({
   }
 
   return (
-    <div className="mt-8 flex flex-col items-center gap-2">
-      <div className="flex items-center justify-center gap-2">
+    <div className="mt-8 flex max-w-full flex-col items-center gap-2 overflow-x-auto">
+      <div className="flex max-w-full flex-wrap items-center justify-center gap-2">
         {Array.from({ length: pages }, (_, i) => i + 1).map((p) => (
           <button
             key={p}
@@ -44,7 +44,7 @@ export function PaginationNav({
             aria-busy={isPending || undefined}
             onClick={() => navigate(hrefForPage(p))}
             className={cn(
-              "inline-flex h-9 min-w-9 items-center justify-center rounded-lg border px-2 text-sm disabled:opacity-50",
+              "inline-flex h-9 min-w-9 shrink-0 items-center justify-center rounded-lg border px-2 text-sm disabled:opacity-50",
               p === current
                 ? "border-accent bg-accent-soft text-accent"
                 : "border-card-border hover:bg-accent-soft",

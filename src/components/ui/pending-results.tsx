@@ -14,7 +14,7 @@ export function PendingResults({
   const { isPending } = usePendingNavigation();
 
   return (
-    <div className="relative min-h-40">
+    <div className="relative min-h-40 min-w-0 max-w-full">
       {isPending ? (
         <div
           className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 rounded-xl bg-background/70 backdrop-blur-[1px]"
@@ -23,12 +23,16 @@ export function PendingResults({
           aria-busy="true"
         >
           <Loader2 className="h-6 w-6 animate-spin text-accent" aria-hidden />
-          <p className="text-sm font-medium text-foreground">{label}</p>
+          <p className="px-3 text-center text-sm font-medium text-foreground">
+            {label}
+          </p>
         </div>
       ) : null}
       <div
         className={
-          isPending ? "pointer-events-none opacity-45 transition-opacity" : ""
+          isPending
+            ? "pointer-events-none min-w-0 max-w-full opacity-45 transition-opacity"
+            : "min-w-0 max-w-full"
         }
       >
         {children}

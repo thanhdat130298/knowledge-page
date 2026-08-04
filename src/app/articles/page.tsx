@@ -47,8 +47,8 @@ export default async function ArticlesPage({
   if (level) paginationQuery.level = level;
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8 md:px-6">
-      <h1 className="font-display text-3xl font-semibold">Bài viết</h1>
+    <div className="mx-auto w-full max-w-6xl overflow-x-clip px-4 py-8 md:px-6">
+      <h1 className="font-display text-3xl font-semibold break-words">Bài viết</h1>
       <p className="mt-1 text-muted">
         {result.total} kết quả · trang {result.page}/{totalPages}
       </p>
@@ -67,7 +67,7 @@ export default async function ArticlesPage({
               Không tìm thấy bài viết phù hợp.
             </div>
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-2 [&>*]:min-w-0">
               {result.items.map((a) => (
                 <ArticleCard key={a.id} article={a} />
               ))}

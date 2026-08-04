@@ -1,0 +1,30 @@
+---
+description: Always guard article/list layouts against horizontal overflow on mobile
+alwaysApply: true
+---
+
+# Layout overflow — always check
+
+Horizontal overflow đã xảy ra trên **bài post detail** và **list articles**. Khi thêm/sửa UI bài viết, series, card, hoặc renderer TipTap: **luôn kiểm tra mobile** (≈320–430px) trước khi coi xong.
+
+## Bắt buộc
+
+- Grid/flex cha: dùng `minmax(0,1fr)` hoặc `min-w-0` trên cột nội dung — mặc định `min-width: auto` dễ vỡ layout vì code/table/title dài.
+- **Không chỉ** `overflow-x-clip` ở wrapper ngoài: mọi child (filter select, card, chip, pagination, grid item) cũng cần `min-w-0` / `max-w-full` / `truncate|break-words`.
+- TipTap / `.prose-article`: `overflow-wrap: anywhere` (hoặc `break-word`); `pre`/table trong khung `overflow-x-auto`; ảnh `max-w-full`.
+- Article list `/articles`: shell `lg:grid-cols-[minmax(0,240px)_minmax(0,1fr)]`; filter form `overflow-hidden`; results `[&>*]:min-w-0`.
+- Category = hashtag/chủ đề; Series = chuỗi học tuần tự — đừng trộn UI/copy.
+
+## Checklist nhanh (mọi PR đụng articles/series)
+
+1. List `/articles` (và home/search cards) — không scroll ngang.
+2. Detail `/articles/[slug]` — heading + Google button + code/table không đẩy layout.
+3. Series `/series` và `/series/[slug]` — list 1…N + pager prev/next ổn trên mobile.
+4. Không regress: TOC mobile, series sidebar, related articles grid.
+
+## Tham chiếu code
+
+- Detail layout: `src/app/articles/[slug]/page.tsx` (`minmax(0,1fr)`, `min-w-0`)
+- Prose: `src/app/globals.css` (`.prose-article`)
+- Card: `src/components/articles/article-card.tsx`
+- Series pager/nav: `src/components/articles/series-nav.tsx`

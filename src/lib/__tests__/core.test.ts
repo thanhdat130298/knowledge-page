@@ -6,8 +6,12 @@ import {
   sanitizeAuthRedirect,
 } from "@/lib/slug";
 import { isAdminEmail, readingTimeFromText } from "@/lib/utils";
-import { loginSchema, registerSchema, ratingSchema } from "@/lib/validations";
-import { extractHeadings } from "@/lib/content";
+import {
+  extractGoogleDriveFileId,
+  toDirectImageUrl,
+} from "@/lib/media-url";
+import { loginSchema, registerSchema, ratingSchema, seriesSchema } from "@/lib/validations";
+import { extractHeadings, googleSearchUrl } from "@/lib/content";
 
 describe("slug", () => {
   it("generates slug from title", () => {
@@ -65,12 +69,45 @@ describe("validation", () => {
       false,
     );
   });
+
+  it("validates series", () => {
+    expect(
+      seriesSchema.safeParse({
+        title: "JS Closures",
+        slug: "js-closures",
+        description: "Series về closure",
+        is_published: true,
+        sort_order: 1,
+      }).success,
+    ).toBe(true);
+    expect(
+      seriesSchema.safeParse({
+        title: "X",
+        slug: "Bad Slug",
+        is_published: false,
+        sort_order: 0,
+      }).success,
+    ).toBe(false);
+  });
 });
 
 describe("reading time", () => {
   it("computes minutes", () => {
     const text = Array.from({ length: 400 }, () => "word").join(" ");
     expect(readingTimeFromText(text)).toBe(2);
+  });
+});
+
+describe("media url", () => {
+  it("converts Google Drive /view links to thumbnail URL", () => {
+    const share =
+      "https://drive.google.com/file/d/1kYRBNniDhqNf5x4d-sObiMBnNlJWecuQ/view?usp=drive_link";
+    expect(extractGoogleDriveFileId(share)).toBe(
+      "1kYRBNniDhqNf5x4d-sObiMBnNlJWecuQ",
+    );
+    expect(toDirectImageUrl(share)).toBe(
+      "https://drive.google.com/thumbnail?id=1kYRBNniDhqNf5x4d-sObiMBnNlJWecuQ&sz=w2000",
+    );
   });
 });
 
@@ -88,5 +125,34 @@ describe("tiptap headings extract", () => {
     });
     expect(headings[0]?.id).toBe("tong-quan");
     expect(headings[0]?.text).toBe("Tổng quan");
+  });
+
+  it("makes duplicate heading slugs unique", () => {
+    const headings = extractHeadings({
+      type: "doc",
+      content: [
+        {
+          type: "heading",
+          attrs: { level: 2 },
+          content: [{ type: "text", text: "Cơ chế" }],
+        },
+        {
+          type: "heading",
+          attrs: { level: 2 },
+          content: [{ type: "text", text: "Cơ chế" }],
+        },
+      ],
+    });
+    expect(headings[0]?.id).toBe("co-che");
+    expect(headings[1]?.id).toBe("co-che-1");
+  });
+});
+
+describe("google search url", () => {
+  it("encodes heading text for Google", () => {
+    expect(googleSearchUrl("Closure là gì?")).toBe(
+      "https://www.google.com/search?q=Closure%20l%C3%A0%20g%C3%AC%3F",
+    );
+    expect(googleSearchUrl("  ")).toBe("https://www.google.com/");
   });
 });

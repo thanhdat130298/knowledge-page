@@ -1,8 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import {
+  googleSearchUrl,
+  headingIdFromNode,
+  plainTextFromNodes,
+} from "@/lib/content";
+import { toDirectImageUrl } from "@/lib/media-url";
 import { cn } from "@/lib/utils";
-import { Check, Copy } from "lucide-react";
+import { Check, Copy, Search } from "lucide-react";
 
 type JSONContent = {
   type?: string;
@@ -39,7 +45,8 @@ function InlineContent({ nodes }: { nodes?: JSONContent[] }) {
     <>
       {nodes.map((n, i) => {
         if (n.type === "hardBreak") return <br key={i} />;
-        if (n.type === "text") return <span key={i}>{renderMarks(n.text || "", n.marks)}</span>;
+        if (n.type === "text")
+          return <span key={i}>{renderMarks(n.text || "", n.marks)}</span>;
         return null;
       })}
     </>
@@ -60,7 +67,7 @@ function CodeBlockView({
     setTimeout(() => setCopied(false), 1500);
   }
   return (
-    <div className="group relative my-4 overflow-hidden rounded-xl border border-card-border">
+    <div className="group relative my-4 max-w-full overflow-hidden rounded-xl border border-card-border">
       <div className="flex items-center justify-between border-b border-card-border bg-[#0f172a] px-3 py-2 text-xs text-slate-300">
         <span>{language || "code"}</span>
         <button
@@ -69,7 +76,11 @@ function CodeBlockView({
           className="inline-flex items-center gap-1 rounded-md px-2 py-1 hover:bg-white/10"
           aria-label="Copy code"
         >
-          {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+          {copied ? (
+            <Check className="h-3.5 w-3.5" />
+          ) : (
+            <Copy className="h-3.5 w-3.5" />
+          )}
           {copied ? "Đã copy" : "Copy"}
         </button>
       </div>
@@ -101,9 +112,56 @@ function CustomBlock({
   );
 }
 
-function renderNode(node: JSONContent, index: number): React.ReactNode {
+function HeadingWithGoogleSearch({
+  level,
+  id,
+  text,
+  children,
+}: {
+  level: number;
+  id: string;
+  text: string;
+  children: React.ReactNode;
+}) {
+  const Tag = level === 3 ? "h3" : "h2";
+  const href = googleSearchUrl(text);
+
+  return (
+    <div
+      className={cn(
+        "heading-with-search group/heading",
+        level === 3 ? "heading-with-search--h3" : "heading-with-search--h2",
+      )}
+    >
+      <Tag id={id} className="min-w-0 flex-1">
+        {children}
+      </Tag>
+      {text ? (
+        <a
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="heading-google-search shrink-0"
+          aria-label={`Tìm trên Google: ${text}`}
+          title="Tìm trên Google khi nội dung chưa rõ"
+        >
+          <Search className="h-3.5 w-3.5" aria-hidden />
+          <span className="hidden sm:inline">Google</span>
+        </a>
+      ) : null}
+    </div>
+  );
+}
+
+function renderNode(
+  node: JSONContent,
+  index: number,
+  headingIds: Map<string, number>,
+): React.ReactNode {
   const type = node.type || "paragraph";
   const children = node.content;
+  const renderChild = (c: JSONContent, i: number) =>
+    renderNode(c, i, headingIds);
 
   if (type === "paragraph") {
     return (
@@ -114,49 +172,35 @@ function renderNode(node: JSONContent, index: number): React.ReactNode {
   }
   if (type === "heading") {
     const level = Number(node.attrs?.level || 2);
-    const text =
-      children?.map((c) => c.text || "").join("") || `section-${index}`;
-    const id =
-      String(node.attrs?.id || "") ||
-      text
-        .toLowerCase()
-        .normalize("NFD")
-        .replace(/\p{M}/gu, "")
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/(^-|-$)/g, "");
-    if (level === 3) {
-      return (
-        <h3 key={index} id={id}>
-          <InlineContent nodes={children} />
-        </h3>
-      );
-    }
+    const id = headingIdFromNode(node, headingIds, index);
+    const text = plainTextFromNodes(children);
     return (
-      <h2 key={index} id={id}>
+      <HeadingWithGoogleSearch
+        key={`${id}-${index}`}
+        level={level}
+        id={id}
+        text={text}
+      >
         <InlineContent nodes={children} />
-      </h2>
+      </HeadingWithGoogleSearch>
     );
   }
   if (type === "bulletList") {
     return (
       <ul key={index} className="mb-4 list-disc space-y-1 pl-6">
-        {children?.map((c, i) => renderNode(c, i))}
+        {children?.map(renderChild)}
       </ul>
     );
   }
   if (type === "orderedList") {
     return (
       <ol key={index} className="mb-4 list-decimal space-y-1 pl-6">
-        {children?.map((c, i) => renderNode(c, i))}
+        {children?.map(renderChild)}
       </ol>
     );
   }
   if (type === "listItem") {
-    return (
-      <li key={index}>
-        {children?.map((c, i) => renderNode(c, i))}
-      </li>
-    );
+    return <li key={index}>{children?.map(renderChild)}</li>;
   }
   if (type === "blockquote") {
     return (
@@ -164,7 +208,7 @@ function renderNode(node: JSONContent, index: number): React.ReactNode {
         key={index}
         className="my-4 border-l-4 border-accent pl-4 text-muted"
       >
-        {children?.map((c, i) => renderNode(c, i))}
+        {children?.map(renderChild)}
       </blockquote>
     );
   }
@@ -182,13 +226,17 @@ function renderNode(node: JSONContent, index: number): React.ReactNode {
     return <hr key={index} className="my-8 border-card-border" />;
   }
   if (type === "image") {
+    const raw = String(node.attrs?.src || "").trim();
+    const src = raw ? toDirectImageUrl(raw) : "";
+    if (!src) return null;
     return (
       <figure key={index} className="my-6">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={String(node.attrs?.src || "")}
+          src={src}
           alt={String(node.attrs?.alt || "")}
-          className="max-w-full rounded-xl border border-card-border"
+          className="h-auto max-w-full rounded-xl border border-card-border"
+          loading="lazy"
         />
         {node.attrs?.caption ? (
           <figcaption className="mt-2 text-center text-sm text-muted">
@@ -214,7 +262,7 @@ function renderNode(node: JSONContent, index: number): React.ReactNode {
   }
   if (type === "table") {
     return (
-      <div key={index} className="my-4 overflow-x-auto">
+      <div key={index} className="table-scroll my-4">
         <table>
           <tbody>
             {children?.map((row, ri) => (
@@ -223,7 +271,7 @@ function renderNode(node: JSONContent, index: number): React.ReactNode {
                   const Tag = cell.type === "tableHeader" ? "th" : "td";
                   return (
                     <Tag key={ci}>
-                      {cell.content?.map((c, i) => renderNode(c, i))}
+                      {cell.content?.map((c, i) => renderChild(c, i))}
                     </Tag>
                   );
                 })}
@@ -256,22 +304,25 @@ function renderNode(node: JSONContent, index: number): React.ReactNode {
         type={type}
         label={String(node.attrs?.label || type)}
       >
-        {children?.map((c, i) => renderNode(c, i))}
+        {children?.map(renderChild)}
       </CustomBlock>
     );
   }
 
-  return (
-    <div key={index}>{children?.map((c, i) => renderNode(c, i))}</div>
-  );
+  return <div key={index}>{children?.map(renderChild)}</div>;
 }
 
-export function ArticleContent({ content }: { content: Record<string, unknown> }) {
+export function ArticleContent({
+  content,
+}: {
+  content: Record<string, unknown>;
+}) {
   const doc = content as JSONContent;
   const nodes = doc.content || [];
+  const headingIds = new Map<string, number>();
   return (
     <div className="prose-article">
-      {nodes.map((n, i) => renderNode(n, i))}
+      {nodes.map((n, i) => renderNode(n, i, headingIds))}
     </div>
   );
 }
@@ -307,8 +358,8 @@ export function TableOfContents({
 
   const list = (
     <ul className="space-y-1 text-sm">
-      {headings.map((h) => (
-        <li key={h.id} className={cn(h.level === 3 && "pl-3")}>
+      {headings.map((h, i) => (
+        <li key={`${h.id}-${i}`} className={cn(h.level === 3 && "pl-3")}>
           <a
             href={`#${h.id}`}
             className={cn(
@@ -317,7 +368,6 @@ export function TableOfContents({
             )}
             onClick={async (e) => {
               if (navigator.clipboard) {
-                // allow normal scroll; optional copy on modifier
                 if (e.altKey) {
                   e.preventDefault();
                   await navigator.clipboard.writeText(
@@ -345,11 +395,15 @@ export function TableOfContents({
         >
           Mục lục {open ? "▴" : "▾"}
         </button>
-        {open ? <div className="mt-2 rounded-xl border border-card-border bg-card p-3">{list}</div> : null}
+        {open ? (
+          <div className="mt-2 rounded-xl border border-card-border bg-card p-3">
+            {list}
+          </div>
+        ) : null}
       </div>
       <nav
         aria-label="Mục lục"
-        className="sticky top-24 hidden max-h-[70vh] overflow-auto rounded-xl border border-card-border bg-card p-4 lg:block"
+        className="scrollbar-thin sticky top-24 hidden max-h-[70vh] overflow-auto rounded-xl border border-card-border bg-card p-4 lg:block"
       >
         <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">
           Mục lục

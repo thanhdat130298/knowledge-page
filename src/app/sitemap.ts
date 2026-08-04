@@ -1,10 +1,14 @@
 import { getLatest } from "@/lib/data/articles";
+import { getPublishedSeries } from "@/lib/data/series";
 import { absoluteUrl } from "@/lib/utils";
 import type { MetadataRoute } from "next";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const articles = await getLatest(100);
-  const staticRoutes = ["", "/articles", "/search"].map((path) => ({
+  const [articles, series] = await Promise.all([
+    getLatest(100),
+    getPublishedSeries(),
+  ]);
+  const staticRoutes = ["", "/articles", "/series", "/search"].map((path) => ({
     url: absoluteUrl(path || "/"),
     lastModified: new Date(),
     changeFrequency: "weekly" as const,
@@ -18,5 +22,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.8,
   }));
 
-  return [...staticRoutes, ...articleRoutes];
+  const seriesRoutes = series.map((s) => ({
+    url: absoluteUrl(`/series/${s.slug}`),
+    lastModified: new Date(),
+    changeFrequency: "weekly" as const,
+    priority: 0.75,
+  }));
+
+  return [...staticRoutes, ...articleRoutes, ...seriesRoutes];
 }

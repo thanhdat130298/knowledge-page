@@ -49,6 +49,7 @@ export default async function AdminDashboardPage() {
       <div className="mt-8 grid gap-4 md:grid-cols-3">
         <Quick href="/admin/articles" title="Quản lý bài" desc="Search, filter, publish" />
         <Quick href="/admin/articles?status=draft" title="Xem draft" desc="Tiếp tục soạn thảo" />
+        <Quick href="/admin/series" title="Series" desc="Chuỗi bài cùng chủ đề" />
         <Quick href="/admin/feedback" title="Feedback" desc="Pending góp ý" />
         <Quick href="/admin/comments" title="Comments" desc="Moderation" />
         <Quick href="/admin/categories" title="Categories" desc="CRUD danh mục" />

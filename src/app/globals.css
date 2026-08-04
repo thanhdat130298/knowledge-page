@@ -14,6 +14,10 @@
   --success: #047857;
   --radius: 14px;
   --shadow: 0 10px 30px rgba(18, 32, 28, 0.06);
+  --scrollbar-size: 10px;
+  --scrollbar-track: color-mix(in oklab, var(--background) 70%, var(--card-border));
+  --scrollbar-thumb: color-mix(in oklab, var(--muted) 45%, var(--card-border));
+  --scrollbar-thumb-hover: color-mix(in oklab, var(--accent) 55%, var(--muted));
   --hero-glow: radial-gradient(1200px 400px at 10% -10%, #99f6e4 0%, transparent 55%),
     radial-gradient(900px 360px at 90% 0%, #bfdbfe 0%, transparent 50%),
     linear-gradient(180deg, #eef7f4 0%, #f4f7f6 55%);
@@ -32,6 +36,9 @@
   --warning: #fbbf24;
   --success: #34d399;
   --shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+  --scrollbar-track: color-mix(in oklab, var(--background) 80%, var(--card-border));
+  --scrollbar-thumb: color-mix(in oklab, var(--muted) 35%, var(--card-border));
+  --scrollbar-thumb-hover: color-mix(in oklab, var(--accent) 50%, var(--muted));
   --hero-glow: radial-gradient(1000px 380px at 15% -20%, #115e59 0%, transparent 55%),
     radial-gradient(800px 320px at 85% 0%, #1e3a5f 0%, transparent 50%),
     linear-gradient(180deg, #0f1a17 0%, #0b1412 60%);
@@ -57,6 +64,54 @@
 
 * {
   border-color: var(--card-border);
+}
+
+/* Custom scrollbar — Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+/* Custom scrollbar — Chromium / Safari */
+*::-webkit-scrollbar {
+  width: var(--scrollbar-size);
+  height: var(--scrollbar-size);
+}
+
+*::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 999px;
+  border: 2px solid var(--scrollbar-track);
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+  border: 2px solid var(--scrollbar-track);
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Thin variant for nested panels (TOC, menus, code) */
+.scrollbar-thin {
+  scrollbar-width: thin;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  border-width: 1px;
 }
 
 html {
@@ -96,18 +151,72 @@ body {
 .prose-article {
   line-height: 1.75;
   font-size: 1.05rem;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.prose-article .heading-with-search {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  max-width: 100%;
+}
+
+.prose-article .heading-with-search--h2 {
+  margin-top: 2.2rem;
+  margin-bottom: 0.85rem;
+}
+
+.prose-article .heading-with-search--h3 {
+  margin-top: 1.6rem;
+  margin-bottom: 0.6rem;
+}
+
+.prose-article .heading-with-search h2,
+.prose-article .heading-with-search h3 {
+  margin-top: 0;
+  margin-bottom: 0;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.prose-article .heading-google-search {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-top: 0.35rem;
+  padding: 0.3rem 0.55rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--card-border);
+  background: var(--card);
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.prose-article .heading-google-search:hover,
+.prose-article .heading-google-search:focus-visible {
+  color: var(--accent);
+  border-color: color-mix(in oklab, var(--accent) 45%, var(--card-border));
+  background: var(--accent-soft);
+  outline: none;
 }
 
 .prose-article h2 {
   font-family: var(--font-display), sans-serif;
-  font-size: 1.55rem;
+  font-size: clamp(1.2rem, 4.5vw, 1.55rem);
   margin-top: 2.2rem;
   margin-bottom: 0.85rem;
   scroll-margin-top: 6rem;
 }
 
 .prose-article h3 {
-  font-size: 1.2rem;
+  font-size: clamp(1.05rem, 3.8vw, 1.2rem);
   margin-top: 1.6rem;
   margin-bottom: 0.6rem;
   scroll-margin-top: 6rem;
@@ -118,8 +227,21 @@ body {
   color: color-mix(in oklab, var(--foreground) 92%, var(--muted));
 }
 
+.prose-article img,
+.ProseMirror img,
+.editor-image {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 1rem 0;
+  border-radius: 12px;
+  border: 1px solid var(--card-border);
+}
+
 .prose-article pre {
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
   border-radius: 12px;
   padding: 1rem;
   margin: 1.25rem 0;
@@ -138,14 +260,21 @@ body {
   padding: 0.15em 0.4em;
   border-radius: 6px;
   background: var(--accent-soft);
+  overflow-wrap: anywhere;
+}
+
+.prose-article .table-scroll,
+.prose-article > div:has(> table) {
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .prose-article table {
   width: 100%;
+  min-width: 28rem;
   border-collapse: collapse;
   margin: 1.25rem 0;
-  display: block;
-  overflow-x: auto;
 }
 
 .prose-article th,
@@ -155,12 +284,30 @@ body {
   text-align: left;
 }
 
+@media (max-width: 639px) {
+  .prose-article {
+    font-size: 1rem;
+  }
+
+  .prose-article .heading-google-search {
+    padding: 0.4rem;
+  }
+
+  .prose-article pre,
+  .prose-article pre code {
+    font-size: 0.8rem;
+  }
+}
+
 .custom-block {
   border-radius: 12px;
   border: 1px solid var(--card-border);
   padding: 1rem 1.1rem;
   margin: 1.25rem 0;
   background: color-mix(in oklab, var(--card) 88%, var(--accent-soft));
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .custom-block[data-type="interviewQuestion"] {

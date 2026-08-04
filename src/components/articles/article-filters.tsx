@@ -55,16 +55,17 @@ export function ArticleFilters({ categories, tags }: Props) {
   }
 
   const selectClass =
-    "h-10 w-full rounded-xl border border-card-border bg-card px-3 text-sm disabled:opacity-50";
+    "h-10 w-full max-w-full min-w-0 rounded-xl border border-card-border bg-card px-3 text-sm disabled:opacity-50";
 
   const form = (
-    <div className="space-y-3">
+    <div className="min-w-0 space-y-3 overflow-hidden">
       <Input
         placeholder="Tìm trong danh sách..."
         value={q}
         onChange={(e) => setQ(e.target.value)}
         aria-label="Search filter"
         disabled={isPending}
+        className="min-w-0 max-w-full"
         onKeyDown={(e) => {
           if (e.key === "Enter") {
             e.preventDefault();
@@ -86,7 +87,7 @@ export function ArticleFilters({ categories, tags }: Props) {
         <option value="">Tất cả danh mục</option>
         {categories.map((c) => (
           <option key={c.slug} value={c.slug}>
-            {c.name}
+            #{c.name}
           </option>
         ))}
       </select>
@@ -154,23 +155,23 @@ export function ArticleFilters({ categories, tags }: Props) {
 
   return (
     <>
-      <div className="mb-4 lg:hidden">
+      <div className="mb-4 min-w-0 lg:hidden">
         <Button
           variant="secondary"
-          className="w-full"
+          className="w-full max-w-full"
           disabled={isPending}
           onClick={() => setOpen((v) => !v)}
         >
           Bộ lọc {open ? "▴" : "▾"}
         </Button>
         {open ? (
-          <div className="mt-3 rounded-xl border border-card-border bg-card p-4">
+          <div className="mt-3 max-w-full overflow-hidden rounded-xl border border-card-border bg-card p-4">
             {form}
           </div>
         ) : null}
       </div>
-      <aside className="hidden lg:block">
-        <div className="sticky top-24 rounded-xl border border-card-border bg-card p-4">
+      <aside className="hidden min-w-0 lg:block">
+        <div className="sticky top-24 max-w-full overflow-hidden rounded-xl border border-card-border bg-card p-4">
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted">
             Bộ lọc
           </h2>

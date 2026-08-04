@@ -70,6 +70,20 @@ export const categorySchema = z.object({
   is_active: z.boolean(),
 });
 
+export const seriesSchema = z.object({
+  title: z.string().min(2, "Tiêu đề tối thiểu 2 ký tự").max(120),
+  slug: z
+    .string()
+    .min(1)
+    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Slug không hợp lệ"),
+  description: z.string().max(1000).optional().nullable(),
+  cover_image_url: z
+    .union([z.string().url(), z.literal(""), z.null()])
+    .optional(),
+  is_published: z.boolean(),
+  sort_order: z.number().int().min(0).max(9999),
+});
+
 export const articleMetaSchema = z.object({
   title: z.string().min(3).max(200),
   slug: z
@@ -78,6 +92,8 @@ export const articleMetaSchema = z.object({
     .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Slug không hợp lệ"),
   excerpt: z.string().max(500).optional().nullable(),
   category_id: z.string().optional().nullable(),
+  series_id: z.union([z.string().uuid(), z.literal(""), z.null()]).optional(),
+  series_order: z.number().int().min(0).max(9999).optional(),
   level: z.enum(["junior", "middle", "senior", "all"]),
   status: z.enum(["draft", "published", "archived"]),
   is_featured: z.boolean().optional(),

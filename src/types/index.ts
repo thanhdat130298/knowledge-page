@@ -42,6 +42,20 @@ export interface Tag {
   article_count?: number;
 }
 
+export interface Series {
+  id: string;
+  title: string;
+  slug: string;
+  description: string | null;
+  cover_image_url: string | null;
+  is_published: boolean;
+  sort_order: number;
+  created_at?: string;
+  updated_at?: string;
+  article_count?: number;
+  articles?: Article[];
+}
+
 export interface Article {
   id: string;
   title: string;
@@ -51,6 +65,8 @@ export interface Article {
   cover_image_url: string | null;
   cover_image_alt: string | null;
   category_id: string | null;
+  series_id?: string | null;
+  series_order?: number;
   level: ArticleLevel;
   status: ArticleStatus;
   is_featured: boolean;
@@ -64,6 +80,7 @@ export interface Article {
   created_at: string;
   updated_at: string;
   category?: Category | null;
+  series?: Series | null;
   tags?: Tag[];
   author?: Profile | null;
   rating_avg?: number;

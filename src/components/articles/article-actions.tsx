@@ -4,52 +4,32 @@ import { useAuthModal } from "@/components/auth/auth-modal";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import type { LearningStatus } from "@/types";
-import {
-  Bookmark,
-  BookmarkCheck,
-  Link2,
-  MessageSquareWarning,
-  Share2,
-  Star,
-} from "lucide-react";
+import { Link2, MessageSquareWarning, Share2, Star } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 
 type Props = {
   articleId: string;
   isLoggedIn: boolean;
-  initialBookmarked?: boolean;
   initialRating?: number;
   ratingAvg?: number;
   ratingCount?: number;
   initialProgress?: LearningStatus;
-  bookmarkCount?: number;
 };
 
-type Busy =
-  | "bookmark"
-  | "rating"
-  | "progress"
-  | "share"
-  | "copy"
-  | "feedback"
-  | null;
+type Busy = "rating" | "progress" | "share" | "copy" | "feedback" | null;
 
 export function ArticleActions({
   articleId,
   isLoggedIn,
-  initialBookmarked = false,
   initialRating = 0,
   ratingAvg = 0,
   ratingCount = 0,
   initialProgress = "not_started",
-  bookmarkCount = 0,
 }: Props) {
   const { openLogin } = useAuthModal();
   const { toast } = useToast();
   const pathname = usePathname();
-  const [bookmarked, setBookmarked] = useState(initialBookmarked);
-  const [bookmarks, setBookmarks] = useState(bookmarkCount);
   const [rating, setRating] = useState(initialRating);
   const [avg, setAvg] = useState(ratingAvg);
   const [count, setCount] = useState(ratingCount);
@@ -58,23 +38,6 @@ export function ArticleActions({
 
   function requireAuth() {
     openLogin(pathname);
-  }
-
-  async function toggleBookmark() {
-    if (!isLoggedIn) return requireAuth();
-    if (busy) return;
-    setBusy("bookmark");
-    try {
-      // TODO: Server Action persist bookmark
-      setBookmarked((v) => !v);
-      setBookmarks((n) => (bookmarked ? Math.max(0, n - 1) : n + 1));
-      toast({
-        title: bookmarked ? "Đã bỏ bookmark" : "Đã lưu bookmark",
-        variant: "success",
-      });
-    } finally {
-      setBusy(null);
-    }
   }
 
   async function setStars(value: number) {
@@ -147,23 +110,8 @@ export function ArticleActions({
   }
 
   return (
-    <div className="space-y-4 rounded-xl border border-card-border bg-card p-4">
+    <div className="space-y-4 overflow-hidden rounded-xl border border-card-border bg-card p-4">
       <div className="flex flex-wrap items-center gap-2">
-        <Button
-          variant={bookmarked ? "primary" : "secondary"}
-          size="sm"
-          onClick={toggleBookmark}
-          loading={busy === "bookmark"}
-          disabled={Boolean(busy) && busy !== "bookmark"}
-          aria-pressed={bookmarked}
-        >
-          {bookmarked ? (
-            <BookmarkCheck className="h-4 w-4" />
-          ) : (
-            <Bookmark className="h-4 w-4" />
-          )}
-          {busy === "bookmark" ? "Đang lưu..." : `Bookmark (${bookmarks})`}
-        </Button>
         <Button
           variant="secondary"
           size="sm"
@@ -201,7 +149,7 @@ export function ArticleActions({
 
       <div>
         <div className="mb-1 text-sm font-medium">Đánh giá bài viết</div>
-        <div className="flex items-center gap-1" aria-label="Rating">
+        <div className="flex flex-wrap items-center gap-1" aria-label="Rating">
           {[1, 2, 3, 4, 5].map((n) => (
             <button
               key={n}
@@ -217,7 +165,7 @@ export function ArticleActions({
               />
             </button>
           ))}
-          <span className="ml-2 text-sm text-muted">
+          <span className="ml-1 text-sm text-muted">
             {busy === "rating"
               ? "Đang lưu..."
               : `${avg.toFixed(1)} · ${count} lượt`}

@@ -15,6 +15,8 @@ export type SaveArticleInput = {
   excerpt?: string | null;
   content: Record<string, unknown>;
   category_id?: string | null;
+  series_id?: string | null;
+  series_order?: number;
   level: ArticleLevel;
   status: ArticleStatus;
   is_featured?: boolean;
@@ -56,6 +58,8 @@ export async function saveArticle(
     slug: input.slug,
     excerpt: input.excerpt,
     category_id: input.category_id,
+    series_id: input.series_id || null,
+    series_order: input.series_order ?? 0,
     level: input.level,
     status: input.status,
     is_featured: input.is_featured ?? false,
@@ -100,6 +104,8 @@ export async function saveArticle(
     excerpt: input.excerpt?.trim() || null,
     content: input.content,
     category_id: input.category_id || null,
+    series_id: input.series_id || null,
+    series_order: input.series_id ? (input.series_order ?? 0) : 0,
     level: input.level,
     status: input.status,
     is_featured: Boolean(input.is_featured),
@@ -154,9 +160,11 @@ export async function saveArticle(
   revalidatePath("/");
   revalidatePath("/articles");
   revalidatePath(`/articles/${input.slug}`);
+  revalidatePath("/series");
   revalidatePath("/admin");
   revalidatePath("/admin/articles");
   revalidatePath(`/admin/articles/${articleId}`);
+  revalidatePath("/admin/series");
 
   return { ok: true, id: articleId!, slug: input.slug };
 }
