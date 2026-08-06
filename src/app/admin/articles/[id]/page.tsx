@@ -5,6 +5,7 @@ import {
   getCategories,
   getTags,
 } from "@/lib/data/articles";
+import { getAdminSeries } from "@/lib/data/series";
 import { requireAdmin } from "@/lib/auth/session";
 import { notFound } from "next/navigation";
 
@@ -13,10 +14,11 @@ type Props = { params: Promise<{ id: string }> };
 export default async function EditArticlePage({ params }: Props) {
   const { id } = await params;
   const { isAdmin } = await requireAdmin();
-  const [article, categories, tags] = await Promise.all([
+  const [article, categories, tags, seriesList] = await Promise.all([
     getArticleById(id),
     getCategories(),
     getTags(),
+    getAdminSeries(),
   ]);
 
   if (!article) notFound();
@@ -34,6 +36,7 @@ export default async function EditArticlePage({ params }: Props) {
         <ArticleEditor
           categories={categories}
           tags={tags}
+          seriesList={seriesList}
           initial={{
             id: article.id,
             title: article.title,
@@ -41,6 +44,8 @@ export default async function EditArticlePage({ params }: Props) {
             excerpt: article.excerpt || "",
             content: article.content,
             category_id: article.category_id || categories[0]?.id || "",
+            series_id: article.series_id || "",
+            series_order: article.series_order ?? 0,
             level: article.level,
             status: article.status,
             is_featured: article.is_featured,

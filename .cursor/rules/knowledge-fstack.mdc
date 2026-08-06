@@ -14,6 +14,7 @@ alwaysApply: true
 - Không tin user id từ client; lấy từ session Supabase.
 - Tiptap: editor và renderer phải đồng bộ extensions/custom blocks.
 - Accessibility + responsive là bắt buộc cho mọi UI mới.
+- **Cursor:** mọi control bấm được (`button`, link, `summary`, checkbox/select…) phải `cursor-pointer`; disabled dùng `cursor-not-allowed`. Tailwind preflight không set sẵn.
 - **Layout overflow:** luôn kiểm tra mobile khi đụng bài post / list articles / series — follow `.cursor/rules/layout-overflow.mdc` (đã từng vỡ layout).
 - Windows: dùng `npm` scripts (`npm run lint|typecheck|test|build`).
 - Không mở rộng ngoài `knowledge_base.md` MVP scope.

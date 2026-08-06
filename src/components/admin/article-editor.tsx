@@ -2,9 +2,7 @@
 
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import Link from "@tiptap/extension-link";
 import Image from "@tiptap/extension-image";
-import Underline from "@tiptap/extension-underline";
 import Placeholder from "@tiptap/extension-placeholder";
 import Youtube from "@tiptap/extension-youtube";
 import { Table } from "@tiptap/extension-table";
@@ -12,21 +10,33 @@ import { TableRow } from "@tiptap/extension-table-row";
 import { TableCell } from "@tiptap/extension-table-cell";
 import { TableHeader } from "@tiptap/extension-table-header";
 import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
+import { Markdown } from "@tiptap/markdown";
 import { common, createLowlight } from "lowlight";
 import { customBlockExtensions } from "@/components/editor/custom-blocks";
+import { EditorToolbar } from "@/components/admin/editor-toolbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/toast";
 import { deleteArticle, saveArticle } from "@/lib/actions/articles";
 import { generateSlug, isValidSlug } from "@/lib/slug";
-import { readingTimeFromText } from "@/lib/utils";
-import type { ArticleLevel, ArticleStatus, Category, Tag } from "@/types";
+import { toDirectImageUrl, mediaUrlHint } from "@/lib/media-url";
+import { cn, readingTimeFromText } from "@/lib/utils";
+import type {
+  ArticleLevel,
+  ArticleStatus,
+  Category,
+  Series,
+  Tag,
+} from "@/types";
 import { useCallback, useEffect, useRef, useState } from "react";
 import LinkNext from "next/link";
 import { useRouter } from "next/navigation";
+import { ExternalLink } from "lucide-react";
 
 const lowlight = createLowlight(common);
+
+type EditorMode = "visual" | "markdown";
 
 type Initial = {
   id?: string;
@@ -35,6 +45,8 @@ type Initial = {
   excerpt: string;
   content: Record<string, unknown>;
   category_id: string;
+  series_id?: string | null;
+  series_order?: number;
   level: ArticleLevel;
   status: ArticleStatus;
   is_featured: boolean;
@@ -48,10 +60,12 @@ export function ArticleEditor({
   initial,
   categories,
   tags,
+  seriesList = [],
 }: {
   initial: Initial;
   categories: Category[];
   tags: Tag[];
+  seriesList?: Series[];
 }) {
   const { toast } = useToast();
   const router = useRouter();
@@ -61,6 +75,8 @@ export function ArticleEditor({
   const [slugTouched, setSlugTouched] = useState(Boolean(initial.slug));
   const [excerpt, setExcerpt] = useState(initial.excerpt);
   const [categoryId, setCategoryId] = useState(initial.category_id);
+  const [seriesId, setSeriesId] = useState(initial.series_id || "");
+  const [seriesOrder, setSeriesOrder] = useState(initial.series_order ?? 0);
   const [level, setLevel] = useState<ArticleLevel>(initial.level);
   const [status, setStatus] = useState<ArticleStatus>(initial.status);
   const [featured, setFeatured] = useState(initial.is_featured);
@@ -74,15 +90,31 @@ export function ArticleEditor({
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">(
     "idle",
   );
+  const [deleting, setDeleting] = useState(false);
+  const [pendingAction, setPendingAction] = useState<
+    "draft" | "published" | "archived" | null
+  >(null);
   const [dirty, setDirty] = useState(false);
+  const [mode, setMode] = useState<EditorMode>("visual");
+  const [markdown, setMarkdown] = useState("");
   const savingRef = useRef(false);
+  const busy = saveState === "saving" || deleting;
 
   const editor = useEditor({
     extensions: [
-      StarterKit.configure({ codeBlock: false }),
-      Underline,
-      Link.configure({ openOnClick: false }),
-      Image,
+      StarterKit.configure({
+        codeBlock: false,
+        // StarterKit v3 already includes link + underline — configure here, don't add twice
+        link: { openOnClick: false },
+      }),
+      Image.configure({
+        inline: false,
+        allowBase64: true,
+        HTMLAttributes: {
+          class:
+            "editor-image max-w-full h-auto rounded-xl border border-card-border",
+        },
+      }),
       Placeholder.configure({ placeholder: "Bắt đầu viết nội dung bài..." }),
       Youtube.configure({ controls: false }),
       Table.configure({ resizable: true }),
@@ -90,6 +122,7 @@ export function ArticleEditor({
       TableHeader,
       TableCell,
       CodeBlockLowlight.configure({ lowlight }),
+      Markdown,
       ...customBlockExtensions,
     ],
     content: initial.content,
@@ -98,7 +131,7 @@ export function ArticleEditor({
     editorProps: {
       attributes: {
         class:
-          "prose-article min-h-[320px] rounded-xl border border-card-border bg-card px-4 py-3 focus:outline-none",
+          "prose-article min-h-[min(70vh,720px)] rounded-none border-0 bg-card px-4 py-4 focus:outline-none",
       },
     },
   });
@@ -113,10 +146,22 @@ export function ArticleEditor({
     return () => window.removeEventListener("beforeunload", onBeforeUnload);
   }, [dirty]);
 
-  const plainText = editor?.getText() || "";
-  // Recalculate when editor updates via dirty/saveState triggers re-render
-  void dirty;
-  void saveState;
+  function switchMode(next: EditorMode) {
+    if (!editor || next === mode) return;
+    if (next === "markdown") {
+      setMarkdown(editor.getMarkdown());
+      setMode("markdown");
+      return;
+    }
+    editor.commands.setContent(markdown, { contentType: "markdown" });
+    setMode("visual");
+    setDirty(true);
+  }
+
+  const plainText =
+    mode === "markdown"
+      ? markdown
+      : editor?.getText() || "";
 
   const wordCount = plainText.trim().split(/\s+/).filter(Boolean).length;
   const readingTime = readingTimeFromText(plainText);
@@ -131,6 +176,10 @@ export function ArticleEditor({
         return { ok: false as const, error: "Slug không hợp lệ" };
       }
 
+      if (mode === "markdown") {
+        editor.commands.setContent(markdown, { contentType: "markdown" });
+      }
+
       savingRef.current = true;
       setSaveState("saving");
       const statusToSave = nextStatus ?? status;
@@ -143,12 +192,14 @@ export function ArticleEditor({
           excerpt,
           content: editor.getJSON() as Record<string, unknown>,
           category_id: categoryId || null,
+          series_id: seriesId || null,
+          series_order: seriesOrder,
           level,
           status: statusToSave,
           is_featured: featured,
           seo_title: seoTitle,
           seo_description: seoDescription,
-          cover_image_url: cover || null,
+          cover_image_url: cover ? toDirectImageUrl(cover) : null,
           tag_ids: selectedTags,
         });
 
@@ -179,10 +230,14 @@ export function ArticleEditor({
       excerpt,
       featured,
       level,
+      markdown,
+      mode,
       router,
       selectedTags,
       seoDescription,
       seoTitle,
+      seriesId,
+      seriesOrder,
       slug,
       status,
       title,
@@ -224,21 +279,32 @@ export function ArticleEditor({
   }
 
   async function publish(nextStatus: ArticleStatus) {
-    const result = await persist(nextStatus);
-    if (!result) return;
-    if (!result.ok) {
-      toast({ title: result.error, variant: "error" });
-      return;
+    setPendingAction(
+      nextStatus === "published"
+        ? "published"
+        : nextStatus === "archived"
+          ? "archived"
+          : "draft",
+    );
+    try {
+      const result = await persist(nextStatus);
+      if (!result) return;
+      if (!result.ok) {
+        toast({ title: result.error, variant: "error" });
+        return;
+      }
+      toast({
+        title:
+          nextStatus === "published"
+            ? "Đã lưu & publish lên Supabase"
+            : nextStatus === "archived"
+              ? "Đã archive trên Supabase"
+              : "Đã lưu draft trên Supabase",
+        variant: "success",
+      });
+    } finally {
+      setPendingAction(null);
     }
-    toast({
-      title:
-        nextStatus === "published"
-          ? "Đã lưu & publish lên Supabase"
-          : nextStatus === "archived"
-            ? "Đã archive trên Supabase"
-            : "Đã lưu draft trên Supabase",
-      variant: "success",
-    });
   }
 
   async function onDelete() {
@@ -247,14 +313,19 @@ export function ArticleEditor({
       return;
     }
     if (!confirm("Xóa vĩnh viễn bài này trên Supabase?")) return;
-    const result = await deleteArticle(articleId);
-    if (!result.ok) {
-      toast({ title: result.error, variant: "error" });
-      return;
+    setDeleting(true);
+    try {
+      const result = await deleteArticle(articleId);
+      if (!result.ok) {
+        toast({ title: result.error, variant: "error" });
+        return;
+      }
+      toast({ title: "Đã xóa bài", variant: "success" });
+      router.push("/admin/articles");
+      router.refresh();
+    } finally {
+      setDeleting(false);
     }
-    toast({ title: "Đã xóa bài", variant: "success" });
-    router.push("/admin/articles");
-    router.refresh();
   }
 
   const tagSuggestions = tags.filter(
@@ -265,23 +336,144 @@ export function ArticleEditor({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-muted">
-        <span>
-          {saveState === "saving"
-            ? "Đang lưu lên Supabase..."
-            : saveState === "saved"
-              ? "Đã lưu trên Supabase"
-              : saveState === "error"
-                ? "Lưu thất bại"
-                : dirty
-                  ? "Có thay đổi chưa lưu"
-                  : articleId
-                    ? "Đã đồng bộ"
-                    : "Chưa lưu"}
-        </span>
-        <span>
-          {wordCount} từ · ~{readingTime} phút đọc
-        </span>
+      <div className="sticky top-14 z-30 -mx-4 border-b border-card-border bg-background/95 shadow-sm backdrop-blur md:top-16 md:-mx-6">
+        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-2 px-4 py-2.5 md:px-6">
+          <div className="min-w-0 text-sm text-muted">
+            <span className="font-medium text-foreground">
+              {saveState === "saving"
+                ? "Đang lưu..."
+                : saveState === "saved"
+                  ? "Đã lưu"
+                  : saveState === "error"
+                    ? "Lưu thất bại"
+                    : dirty
+                      ? "Chưa lưu"
+                      : articleId
+                        ? "Đã đồng bộ"
+                        : "Bài mới"}
+            </span>
+            <span className="mx-2 text-card-border" aria-hidden>
+              ·
+            </span>
+            <span>
+              {wordCount} từ · ~{readingTime} phút
+            </span>
+            <span className="mx-2 text-card-border" aria-hidden>
+              ·
+            </span>
+            <span className="capitalize">{status}</span>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              size="sm"
+              onClick={() => publish("draft")}
+              variant="secondary"
+              loading={pendingAction === "draft"}
+              disabled={busy}
+            >
+              {pendingAction === "draft" ? "Đang lưu..." : "Lưu draft"}
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => publish("published")}
+              loading={pendingAction === "published"}
+              disabled={busy}
+            >
+              {pendingAction === "published" ? "Đang publish..." : "Publish"}
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => publish("draft")}
+              variant="secondary"
+              disabled={busy || status === "draft"}
+            >
+              Unpublish
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => publish("archived")}
+              variant="secondary"
+              loading={pendingAction === "archived"}
+              disabled={busy}
+            >
+              {pendingAction === "archived" ? "..." : "Archive"}
+            </Button>
+            {articleId ? (
+              <Button
+                size="sm"
+                onClick={onDelete}
+                variant="danger"
+                loading={deleting}
+                disabled={busy}
+              >
+                {deleting ? "..." : "Xóa"}
+              </Button>
+            ) : null}
+            {slug ? (
+              <LinkNext
+                href={`/articles/${slug}`}
+                className="inline-flex h-8 items-center gap-1 rounded-xl border border-card-border px-3 text-sm hover:bg-accent-soft/40"
+                target="_blank"
+              >
+                <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+                Preview
+              </LinkNext>
+            ) : null}
+          </div>
+        </div>
+
+        {editor ? (
+          <div className="border-t border-card-border bg-card/95">
+            <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-2 px-4 py-2 md:px-6">
+              <div
+                className="inline-flex rounded-xl border border-card-border p-0.5"
+                role="tablist"
+                aria-label="Chế độ soạn thảo"
+              >
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={mode === "visual"}
+                  className={cn(
+                    "rounded-lg px-3 py-1.5 text-sm",
+                    mode === "visual"
+                      ? "bg-accent text-accent-foreground"
+                      : "text-muted hover:bg-accent-soft/50",
+                  )}
+                  onClick={() => switchMode("visual")}
+                >
+                  Visual
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={mode === "markdown"}
+                  className={cn(
+                    "rounded-lg px-3 py-1.5 text-sm",
+                    mode === "markdown"
+                      ? "bg-accent text-accent-foreground"
+                      : "text-muted hover:bg-accent-soft/50",
+                  )}
+                  onClick={() => switchMode("markdown")}
+                >
+                  Markdown
+                </button>
+              </div>
+              <p className="text-xs text-muted">
+                Toolbar luôn dính khi cuộn · chọn chữ để xem format đang active
+              </p>
+            </div>
+            {mode === "visual" ? (
+              <div className="mx-auto max-w-5xl px-2 md:px-4">
+                <EditorToolbar
+                  editor={editor}
+                  onInsertBlock={insertBlock}
+                  sticky={false}
+                />
+              </div>
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
@@ -316,6 +508,16 @@ export function ArticleEditor({
         </div>
       </div>
 
+      <details className="rounded-xl border border-card-border bg-card open:pb-4">
+        <summary className="cursor-pointer list-none px-4 py-3 text-sm font-medium marker:content-none [&::-webkit-details-marker]:hidden">
+          <span className="flex items-center justify-between gap-2">
+            <span>Thêm metadata (excerpt, SEO, series, cover…)</span>
+            <span className="text-xs font-normal text-muted">
+              Bấm để mở / thu gọn
+            </span>
+          </span>
+        </summary>
+        <div className="space-y-4 border-t border-card-border px-4 pt-4">
       <div>
         <label className="mb-1 block text-sm" htmlFor="excerpt">
           Excerpt
@@ -373,6 +575,41 @@ export function ArticleEditor({
             <option value="published">Published</option>
             <option value="archived">Archived</option>
           </select>
+        </div>
+      </div>
+
+      <div className="grid gap-3 md:grid-cols-2">
+        <div>
+          <label className="mb-1 block text-sm">Series</label>
+          <select
+            className="h-10 w-full rounded-xl border border-card-border bg-card px-3 text-sm"
+            value={seriesId}
+            onChange={(e) => {
+              setSeriesId(e.target.value);
+              setDirty(true);
+            }}
+          >
+            <option value="">Không thuộc series</option>
+            {seriesList.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.title}
+                {s.is_published ? "" : " (draft)"}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="mb-1 block text-sm">Thứ tự trong series</label>
+          <Input
+            type="number"
+            min={0}
+            value={seriesOrder}
+            disabled={!seriesId}
+            onChange={(e) => {
+              setSeriesOrder(Number(e.target.value) || 0);
+              setDirty(true);
+            }}
+          />
         </div>
       </div>
 
@@ -454,166 +691,92 @@ export function ArticleEditor({
       </div>
 
       <div>
-        <label className="mb-1 block text-sm">Cover image URL</label>
+        <label className="mb-1 block text-sm" htmlFor="cover-url">
+          Cover image URL
+        </label>
         <Input
+          id="cover-url"
           value={cover}
-          onChange={(e) => setCover(e.target.value)}
-          placeholder="https://... (hoặc upload qua Storage khi đã cấu hình)"
+          onChange={(e) => {
+            setCover(e.target.value);
+            setDirty(true);
+          }}
+          onBlur={() => {
+            const next = toDirectImageUrl(cover);
+            if (next !== cover) {
+              setCover(next);
+              setDirty(true);
+            }
+          }}
+          placeholder="https://.../.jpg hoặc .png (không dùng link /view của Drive)"
         />
+        {mediaUrlHint(cover) ? (
+          <p className="mt-2 text-xs text-warning">{mediaUrlHint(cover)}</p>
+        ) : null}
+        {cover.trim() ? (
+          <div className="mt-3 overflow-hidden rounded-xl border border-card-border bg-card">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={toDirectImageUrl(cover)}
+              alt="Cover preview"
+              className="max-h-56 w-full object-cover"
+              onError={(e) => {
+                (e.currentTarget as HTMLImageElement).style.display = "none";
+                const hint = e.currentTarget.nextElementSibling;
+                if (hint instanceof HTMLElement) hint.hidden = false;
+              }}
+              onLoad={(e) => {
+                (e.currentTarget as HTMLImageElement).style.display = "block";
+                const hint = e.currentTarget.nextElementSibling;
+                if (hint instanceof HTMLElement) hint.hidden = true;
+              }}
+            />
+            <p
+              hidden
+              className="border-t border-danger/30 bg-danger/5 px-3 py-2 text-xs text-danger"
+            >
+              Không tải được ảnh. Link Drive dạng /view không dùng được cho
+              &lt;img&gt;. Hãy dùng URL trực tiếp kết thúc bằng .jpg/.png/.webp,
+              hoặc upload lên Supabase Storage.
+            </p>
+            <p className="border-t border-card-border px-3 py-2 text-xs text-muted">
+              URL đang dùng để hiển thị: {toDirectImageUrl(cover)}
+            </p>
+          </div>
+        ) : (
+          <p className="mt-1 text-xs text-muted">
+            Dán URL ảnh công khai (file ảnh thật). Không dán link trang Google
+            Drive /view.
+          </p>
+        )}
       </div>
+        </div>
+      </details>
 
       {editor ? (
-        <div>
-          <div className="mb-2 flex flex-wrap gap-1">
-            <Tool onClick={() => editor.chain().focus().toggleBold().run()}>
-              Bold
-            </Tool>
-            <Tool onClick={() => editor.chain().focus().toggleItalic().run()}>
-              Italic
-            </Tool>
-            <Tool onClick={() => editor.chain().focus().toggleUnderline().run()}>
-              Underline
-            </Tool>
-            <Tool onClick={() => editor.chain().focus().toggleStrike().run()}>
-              Strike
-            </Tool>
-            <Tool
-              onClick={() =>
-                editor.chain().focus().toggleHeading({ level: 2 }).run()
-              }
-            >
-              H2
-            </Tool>
-            <Tool
-              onClick={() =>
-                editor.chain().focus().toggleHeading({ level: 3 }).run()
-              }
-            >
-              H3
-            </Tool>
-            <Tool onClick={() => editor.chain().focus().toggleBulletList().run()}>
-              Bullet
-            </Tool>
-            <Tool
-              onClick={() => editor.chain().focus().toggleOrderedList().run()}
-            >
-              Numbered
-            </Tool>
-            <Tool
-              onClick={() => editor.chain().focus().toggleBlockquote().run()}
-            >
-              Quote
-            </Tool>
-            <Tool
-              onClick={() => editor.chain().focus().toggleCodeBlock().run()}
-            >
-              Code
-            </Tool>
-            <Tool
-              onClick={() =>
-                editor
-                  .chain()
-                  .focus()
-                  .insertTable({ rows: 2, cols: 2, withHeaderRow: true })
-                  .run()
-              }
-            >
-              Table
-            </Tool>
-            <Tool onClick={() => editor.chain().focus().setHorizontalRule().run()}>
-              Divider
-            </Tool>
-            <Tool
-              onClick={() => {
-                const url = window.prompt("URL ảnh");
-                if (url) editor.chain().focus().setImage({ src: url }).run();
+        <div className="rounded-xl border border-card-border bg-card">
+          {mode === "visual" ? (
+            <EditorContent editor={editor} />
+          ) : (
+            <Textarea
+              value={markdown}
+              onChange={(e) => {
+                setMarkdown(e.target.value);
+                setDirty(true);
               }}
-            >
-              Image
-            </Tool>
-            <Tool
-              onClick={() => {
-                const url = window.prompt("YouTube URL");
-                if (url) editor.commands.setYoutubeVideo({ src: url });
-              }}
-            >
-              YouTube
-            </Tool>
-            <Tool onClick={() => editor.chain().focus().undo().run()}>Undo</Tool>
-            <Tool onClick={() => editor.chain().focus().redo().run()}>Redo</Tool>
-          </div>
-          <div className="mb-2 flex flex-wrap gap-1">
-            {[
-              ["interviewQuestion", "Question"],
-              ["shortAnswer", "Short"],
-              ["detailedExplanation", "Explain"],
-              ["note", "Note"],
-              ["warning", "Warning"],
-              ["commonMistake", "Mistake"],
-              ["followUpQuestion", "Follow-up"],
-              ["juniorAnswer", "Junior"],
-              ["middleAnswer", "Middle"],
-              ["seniorAnswer", "Senior"],
-              ["realExperience", "Experience"],
-              ["reference", "Reference"],
-            ].map(([type, label]) => (
-              <Tool key={type} onClick={() => insertBlock(type)}>
-                {label}
-              </Tool>
-            ))}
-          </div>
-          <EditorContent editor={editor} />
+              className="min-h-[420px] rounded-xl border-0 font-mono text-sm focus-visible:ring-0"
+              placeholder={
+                "# Tiêu đề\n\nViết nội dung Markdown...\n\n```js\nconsole.log('hi')\n```"
+              }
+              aria-label="Nội dung Markdown"
+            />
+          )}
         </div>
       ) : (
         <div className="rounded-xl border border-card-border p-8 text-muted">
           Đang tải editor...
         </div>
       )}
-
-      <div className="flex flex-wrap gap-2">
-        <Button onClick={() => publish("draft")} variant="secondary">
-          Lưu draft
-        </Button>
-        <Button onClick={() => publish("published")}>Publish</Button>
-        <Button onClick={() => publish("draft")} variant="secondary">
-          Unpublish
-        </Button>
-        <Button onClick={() => publish("archived")} variant="secondary">
-          Archive
-        </Button>
-        {articleId ? (
-          <Button onClick={onDelete} variant="danger">
-            Xóa
-          </Button>
-        ) : null}
-        {slug ? (
-          <LinkNext
-            href={`/articles/${slug}`}
-            className="inline-flex h-10 items-center rounded-xl border border-card-border px-4 text-sm"
-            target="_blank"
-          >
-            Preview
-          </LinkNext>
-        ) : null}
-      </div>
     </div>
-  );
-}
-
-function Tool({
-  children,
-  onClick,
-}: {
-  children: React.ReactNode;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="rounded-lg border border-card-border px-2 py-1 text-xs hover:bg-accent-soft"
-    >
-      {children}
-    </button>
   );
 }

@@ -26,7 +26,7 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
           }
         />
       </Suspense>
-      <main className="min-w-0 flex-1 overflow-x-clip">{children}</main>
+      <main className="min-w-0 flex-1">{children}</main>
       <footer className="mt-16 border-t border-card-border">
         <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-8 text-sm text-muted md:flex-row md:items-center md:justify-between md:px-6">
           <div className="min-w-0">

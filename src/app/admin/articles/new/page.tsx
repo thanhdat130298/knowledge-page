@@ -1,11 +1,16 @@
 import { ArticleEditor } from "@/components/admin/article-editor";
 import { BackNav } from "@/components/ui/back-link";
 import { getCategories, getTags } from "@/lib/data/articles";
+import { getAdminSeries } from "@/lib/data/series";
 import { requireAdmin } from "@/lib/auth/session";
 
 export default async function NewArticlePage() {
   const { isAdmin } = await requireAdmin();
-  const [categories, tags] = await Promise.all([getCategories(), getTags()]);
+  const [categories, tags, seriesList] = await Promise.all([
+    getCategories(),
+    getTags(),
+    getAdminSeries(),
+  ]);
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 md:px-6">
@@ -21,12 +26,15 @@ export default async function NewArticlePage() {
         <ArticleEditor
           categories={categories}
           tags={tags}
+          seriesList={seriesList}
           initial={{
             title: "",
             slug: "",
             excerpt: "",
             content: { type: "doc", content: [{ type: "paragraph" }] },
             category_id: categories[0]?.id || "",
+            series_id: "",
+            series_order: 0,
             level: "all",
             status: "draft",
             is_featured: false,
